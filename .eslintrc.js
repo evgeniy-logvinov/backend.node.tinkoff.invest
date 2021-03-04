@@ -111,7 +111,7 @@ module.exports = {
         // copyright
         "notice/notice": [2, {
             "mustMatch": "Copyright",
-            "templateFile": "./utils/copyright.js",
+            "templateFile": "./config/copyright.js",
         }],
     }
 };

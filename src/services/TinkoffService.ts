@@ -1,10 +1,25 @@
+/**
+ * Copyright (c) evgeniy.logvinov.k
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import OpenAPI, { CandleResolution, Depth, MarketInstrument, PlacedLimitOrder } from '@tinkoff/invest-openapi-js-sdk';
-const dotenv = require('dotenv').config({ path: `.env.${process.env.NODE_ENV}` });
+// const dotenv = require('dotenv').config({ path: `.env.${process.env.NODE_ENV}` });
 
 // const ap iURL = 'https://api-invest.tinkoff.ru/openapi';
 const sandboxApiURL = 'https://api-invest.tinkoff.ru/openapi/sandbox/';
 const socketURL = 'wss://api-invest.tinkoff.ru/openapi/md/v1/md-openapi/ws';
-const secretToken = process.env.TOKEN; // токен для боевого api
+// const secretToken = process.env.TOKEN; // токен для боевого api
 const sandboxToken = process.env.SANDBOX_TOKEN; // токен для сандбокса
 console.log('sandboxToken', sandboxToken);
 const api = new OpenAPI({ apiURL: sandboxApiURL, secretToken: sandboxToken as string, socketURL });
@@ -14,7 +29,7 @@ class TinkoffService {
 
     private socketURL = 'wss://api-invest.tinkoff.ru/openapi/md/v1/md-openapi/ws';
 
-    private secretToken = 'xxx'; // токен для сандбокса
+    // private secretToken = 'xxx'; // токен для сандбокса
 
     public api: any;
 
@@ -33,7 +48,7 @@ class TinkoffService {
       try {
         await api.sandboxClear();
       } catch (e) {
-          console.log(e);
+        console.log(e);
       }
     }
 
@@ -44,7 +59,7 @@ class TinkoffService {
       } catch (e) {
         console.log(e);
       }
-  }
+    }
 
     public getPortfolioCurrencies = async () => {
       try {
@@ -57,7 +72,7 @@ class TinkoffService {
 
     public getInstrumentPortfolio = async ({figi}: MarketInstrument) => {
       try {
-        const res = await api.instrumentPortfolio({ figi })
+        const res = await api.instrumentPortfolio({ figi });
         console.log('get instrument portfolio', res);
       } catch (e) {
         console.log(e);
@@ -95,7 +110,7 @@ class TinkoffService {
 
     public getCandles = async ({figi}: MarketInstrument, from: string = '2019-08-19T18:38:33.131642+03:00', to: string = '2019-08-19T18:48:33.131642+03:00', interval: CandleResolution = '1min') => {
       try {
-        const res = await api.candlesGet({from, to, figi, interval}) // Получаем свечи за конкретный промежуток времени.
+        const res = await api.candlesGet({from, to, figi, interval}); // Получаем свечи за конкретный промежуток времени.
         console.log('Candels', res);
       } catch (e) {
         console.log(e);
@@ -103,7 +118,7 @@ class TinkoffService {
     }
 
     public getOrderBookByDepth = async ({figi}: MarketInstrument, depth: Depth = 10): Promise<() => void> => {
-      return api.orderbook({ figi, depth }, (x) => {
+      return api.orderbook({ figi, depth }, x => {
         console.log('orderbook by depth', x.bids); // Стакан
       });
     }
@@ -115,7 +130,7 @@ class TinkoffService {
     // }
 
     public getCandle = async (marketInstrument: MarketInstrument) => {
-      api.candle(marketInstrument, (x) => {
+      api.candle(marketInstrument, x => {
         const candleValue = x.h;
         console.log('candle', candleValue);
 
@@ -145,23 +160,23 @@ class TinkoffService {
       } catch (e) {
         console.log(e);
       }
-    //   console.log(await api.setCurrenciesBalance({ currency: 'USD', balance: 1000 })); // 1000$ на счет
-    //   console.log(await api.portfolioCurrencies());
-    //   console.log(await api.instrumentPortfolio({ figi })); // В портфеле ничего нет
-    //   console.log(await api.limitOrder({
-    //     operation: 'Buy', figi, lots: 1, price: 100,
-    //   })); // Покупаем AAPL
-    //   console.log(await api.instrumentPortfolio({ figi })); // Сделка прошла моментально
-    //   console.log(await api.orderbookGet({ figi })); // получаем стакан по AAPL
+      //   console.log(await api.setCurrenciesBalance({ currency: 'USD', balance: 1000 })); // 1000$ на счет
+      //   console.log(await api.portfolioCurrencies());
+      //   console.log(await api.instrumentPortfolio({ figi })); // В портфеле ничего нет
+      //   console.log(await api.limitOrder({
+      //     operation: 'Buy', figi, lots: 1, price: 100,
+      //   })); // Покупаем AAPL
+      //   console.log(await api.instrumentPortfolio({ figi })); // Сделка прошла моментально
+      //   console.log(await api.orderbookGet({ figi })); // получаем стакан по AAPL
 
-    //   console.log(
-    //     await api.candlesGet({
-    //       from: '2019-08-19T18:38:33.131642+03:00',
-    //       to: '2019-08-19T18:48:33.131642+03:00',
-    //       figi,
-    //       interval: '1min',
-    //     }), // Получаем свечи за конкретный промежуток времени.
-    //   );
+      //   console.log(
+      //     await api.candlesGet({
+      //       from: '2019-08-19T18:38:33.131642+03:00',
+      //       to: '2019-08-19T18:48:33.131642+03:00',
+      //       figi,
+      //       interval: '1min',
+      //     }), // Получаем свечи за конкретный промежуток времени.
+      //   );
 
     //   api.orderbook({ figi, depth: 10 }, (x) => {
     //     console.log(x.bids);
