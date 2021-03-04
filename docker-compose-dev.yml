@@ -1,0 +1,24 @@
+version: "3"
+
+services:
+  carrier:
+    build: .
+    ports:
+      - "8080:8080"
+      - "9229:9229"
+    depends_on:
+      - postgres
+    links:
+      - postgres
+    command: "npm run start:in-docker:dev"
+    volumes:
+      - "./src:/usr/src/app/src"
+      - "./app:/usr/src/app/app"
+      - "./index.js:/usr/src/app/index.js"
+
+  postgres:
+    image: postgres
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_PASSWORD=testtesttest

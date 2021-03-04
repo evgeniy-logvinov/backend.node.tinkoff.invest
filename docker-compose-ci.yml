@@ -1,0 +1,34 @@
+version: "3"
+
+services:
+  test:
+    image: carrier_image
+    environment:
+      - TEST_API_HOST=http://carrier:8080
+    volumes:
+      - "./app:/usr/src/app/app"
+    depends_on:
+      - carrier
+    command: "npm run test:ci"
+
+  carrier:
+    build: .
+    image: carrier_image
+    volumes:
+      - "./app:/usr/src/app/app"
+    depends_on:
+      - postgres
+    links:
+      - postgres
+    ports:
+      - "8080:8080"
+    command: "npm run start:in-docker:ci"
+    environment:
+      - NODE_ENV=test
+
+  postgres:
+    image: postgres
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_PASSWORD=testtesttest
