@@ -61,7 +61,7 @@
     "start": "node .",
     "start:inspect": "npm run build && node --inspect=0.0.0.0:9229 .",
     "start:dev": "npm run build && docker-compose -f docker-compose-dev.yml up --force-recreate --build --exit-code-from carrier",
-    "start:in-docker:dev": "knex migrate:latest && nodemon -L",
+    "start:in-docker:dev": "node utils/wait-for.js postgres 5432 50000 && knex migrate:latest && nodemon -L",
     "start:prod": "NODE_ENV=production nodemon index.ts"
   },
   "repository": {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) evgeniy.logvinov.k
+ * Copyright (c) Mesto.co
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,18 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import express from 'express';
-import CarrierService from './services/CarrierService';
+exports.up = function(knex) {
+  return knex.schema.createTable('test_table', function(table) {
+    table.increments('id');
+    table.integer('fieldA').notNullable();
+    table.string('fieldB').notNullable();
+  });
+};
 
-const app = express();
-
-console.log('sandboxToken', process.env.SANDBOX_TOKEN);
-if (process.env.SANDBOX_TOKEN) {
-  const carrier = new CarrierService();
-  carrier.testSandox();
-} else {
-  throw Error('Please fill sandbox token');
-}
-
-
-export default app;
+exports.down = function(knex) {
+  return knex.schema.dropTable('test_table');
+};

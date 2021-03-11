@@ -21,7 +21,6 @@ const sandboxApiURL = 'https://api-invest.tinkoff.ru/openapi/sandbox/';
 const socketURL = 'wss://api-invest.tinkoff.ru/openapi/md/v1/md-openapi/ws';
 // const secretToken = process.env.TOKEN; // токен для боевого api
 const sandboxToken = process.env.SANDBOX_TOKEN; // токен для сандбокса
-console.log('sandboxToken', sandboxToken);
 const api = new OpenAPI({ apiURL: sandboxApiURL, secretToken: sandboxToken as string, socketURL });
 
 class TinkoffService {

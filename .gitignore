@@ -118,3 +118,4 @@ drivers/
 tsconfig.tsbuildinfo
 app/
 jest.env.dev.js
+pgadmin
