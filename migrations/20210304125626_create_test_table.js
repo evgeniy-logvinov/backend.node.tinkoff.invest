@@ -13,18 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import express from 'express';
-import CarrierService from './services/CarrierService';
+exports.up = function(knex) {
+  return knex.schema.createTable('Test', function(table) {
+    table.increments('id');
+    table.integer('fieldA').notNullable();
+    table.string('fieldB').notNullable();
+  });
+};
 
-const app = express();
-
-console.log('sandboxToken', process.env.SANDBOX_TOKEN);
-if (process.env.SANDBOX_TOKEN) {
-  const carrier = new CarrierService();
-  carrier.Apple();
-} else {
-  throw Error('Please fill sandbox token');
-}
-
-
-export default app;
+exports.down = function(knex) {
+  return knex.schema.dropTable('Test');
+};

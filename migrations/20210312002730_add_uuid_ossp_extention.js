@@ -13,18 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import express from 'express';
-import CarrierService from './services/CarrierService';
+exports.up = function(knex) {
+  return knex.raw('create extension if not exists "uuid-ossp"');
+};
 
-const app = express();
-
-console.log('sandboxToken', process.env.SANDBOX_TOKEN);
-if (process.env.SANDBOX_TOKEN) {
-  const carrier = new CarrierService();
-  carrier.Apple();
-} else {
-  throw Error('Please fill sandbox token');
-}
-
-
-export default app;
+exports.down = function(knex) {
+  return knex.raw('drop extension if exists "uuid-ossp"');
+};

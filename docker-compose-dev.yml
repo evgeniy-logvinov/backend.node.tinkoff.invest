@@ -4,7 +4,7 @@ services:
     container_name: carrier_container
     build: .
     ports:
-      - "8080:8099"
+      - "8090:8080"
       - "9229:9229"
     depends_on:
       - postgres

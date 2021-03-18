@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Mesto.co
+ * Copyright (c) evgeniy.logvinov.k
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,14 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-exports.up = function(knex) {
-  return knex.schema.createTable('test_table', function(table) {
-    table.increments('id');
-    table.integer('fieldA').notNullable();
-    table.string('fieldB').notNullable();
-  });
-};
+export default class HelperService {
 
-exports.down = function(knex) {
-  return knex.schema.dropTable('test_table');
-};
+  public static errorHandler(err: any) {
+    console.log(err);
+  }
+
+}

@@ -13,18 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import express from 'express';
-import CarrierService from './services/CarrierService';
+class InvestorService {
 
-const app = express();
-
-console.log('sandboxToken', process.env.SANDBOX_TOKEN);
-if (process.env.SANDBOX_TOKEN) {
-  const carrier = new CarrierService();
-  carrier.Apple();
-} else {
-  throw Error('Please fill sandbox token');
+    public static getInvestorComission = (volume: number) => {
+      return Math.round(volume * 0.3) / 100;
+    }
 }
 
-
-export default app;
+export default InvestorService;
