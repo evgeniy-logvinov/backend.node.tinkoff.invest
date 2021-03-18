@@ -13,70 +13,65 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { MarketInstrument, OperationType, PlacedLimitOrder } from '@tinkoff/invest-openapi-js-sdk';
+import { PlacedLimitOrder } from '@tinkoff/invest-openapi-js-sdk';
 import DBService from './DBService';
 import TinkoffOrderService from './TinkoffOrderService';
 import HelperService from './HelperService';
 import InvestorService from './InvestorService';
-
-export interface BuyObject {
-  volume: number;
-  placedLimitOrderId: string;
-  fixedVolume: number;
-}
+import { OperationInfo } from './TinkoffService';
 
 class TinkoffBuyService {
     private step = 0;
 
     private previousVolumes: Set<number> = new Set();
 
-    private marketInstrument: MarketInstrument | null = null;
-
-    private buyOperation: BuyObject = {
-      volume: 0,
-      placedLimitOrderId: '',
+    private operationInfo: OperationInfo = {
+      buy: {
+        limitOrderId: '',
+        price: 0,
+        comission: 0,
+      },
+      sell: {
+        limitOrderId: '',
+        price: 0,
+        comission: 0,
+      },
       fixedVolume: 0,
+      operationType: 'Buy',
     }
 
-    constructor(buyOperation: BuyObject, marketInstrument: MarketInstrument) {
-      this.buyOperation = buyOperation;
-      this.marketInstrument = marketInstrument;
+    constructor(operationInfo: OperationInfo) {
+      this.operationInfo = operationInfo;
     }
 
-    public async buyLogic(maxBid: number) {
-      let operationType: OperationType = 'Buy';
-      this.buyOperation.placedLimitOrderId;
-
-      if (!this.buyOperation.placedLimitOrderId) {
+    public async buyLogic(maxBid: number): Promise<OperationInfo> {
+      if (!this.operationInfo.buy.limitOrderId) {
         this.startCheckMaxBid(maxBid);
       } else {
-        const hasPlacedOrder = await TinkoffOrderService.hasPlacedOrder(this.buyOperation.placedLimitOrderId);
+        const hasPlacedOrder = await TinkoffOrderService.hasPlacedOrder(this.operationInfo.buy.limitOrderId);
         if (!hasPlacedOrder) {
-          if (this.marketInstrument) {
-            await DBService.buyInstrument({
-              figi: this.marketInstrument.figi,
-              buyVolume: this.buyOperation.volume,
-              buyComission: InvestorService.getInvestorComission(this.buyOperation.volume), placedLimitOrderId: this.buyOperation.placedLimitOrderId
-            });
-            operationType = 'Sell';
-            this.buyOperation.placedLimitOrderId = '';
+          if (this.operationInfo.marketInstrument) {
+            this.operationInfo.buy.comission = InvestorService.getInvestorComission(this.operationInfo.buy.price);
+            await DBService.buyInstrument(this.operationInfo);
+            this.operationInfo.operationType = 'Sell';
+            this.operationInfo.buy.limitOrderId = '';
             console.log('Buy!');
           }
         }
       }
 
-      return {operationType, buyOperation: this.buyOperation};
+      return this.operationInfo;
     }
 
     private startCheckMaxBid(maxBid: number) {
-      if (!this.buyOperation.fixedVolume) {
-        this.buyOperation.fixedVolume = maxBid;
+      if (!this.operationInfo.fixedVolume) {
+        this.operationInfo.fixedVolume = maxBid;
       } else {
         // console.log('--->>', this.fixedVolume, x.bids[0][0], this.previousVolumes.size, this.fixedVolume >= x.bids[0][0]);
-        if (this.buyOperation.fixedVolume > maxBid) {
-          this.buyOperation.fixedVolume = maxBid;
+        if (this.operationInfo.fixedVolume > maxBid) {
+          this.operationInfo.fixedVolume = maxBid;
           this.previousVolumes.clear();
-        } else if (this.buyOperation.fixedVolume < maxBid) {
+        } else if (this.operationInfo.fixedVolume < maxBid) {
           const maxElement = [...this.previousVolumes].find(el => el > maxBid);
           if (!maxElement)
             this.previousVolumes.add(maxBid);
@@ -87,17 +82,17 @@ class TinkoffBuyService {
           console.log('Buy');
         }
       }
-      console.log('this.fixedVolume', this.buyOperation.fixedVolume);
+      console.log('this.fixedVolume', this.operationInfo.fixedVolume);
     }
 
     public async buy(price: number = 10) {
-      if (this.marketInstrument) {
+      if (this.operationInfo.marketInstrument) {
         try {
-          this.buyOperation.volume = price;
+          this.operationInfo.buy.price = price;
           console.log('price', price);
-          const placedLimitOrder: PlacedLimitOrder | undefined = await TinkoffOrderService.createLimitOrder('Buy', this.marketInstrument, 1, this.buyOperation.volume);
+          const placedLimitOrder: PlacedLimitOrder | undefined = await TinkoffOrderService.createLimitOrder('Buy', this.operationInfo.marketInstrument, 1, this.operationInfo.buy.price);
           if (placedLimitOrder)
-            this.buyOperation.placedLimitOrderId = placedLimitOrder.orderId || '';
+            this.operationInfo.buy.limitOrderId = placedLimitOrder.orderId || '';
           else
             throw Error('Order not created');
 
@@ -108,7 +103,7 @@ class TinkoffBuyService {
     }
 
     private getMinPriceIncrement = () => {
-      return this.marketInstrument && this.marketInstrument.minPriceIncrement || 0;
+      return this.operationInfo.marketInstrument && this.operationInfo.marketInstrument.minPriceIncrement || 0;
     }
 }
 

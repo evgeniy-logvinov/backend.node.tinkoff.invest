@@ -14,31 +14,65 @@
  * limitations under the License.
  */
 // import api from './ApiService';
-import { MarketInstrument } from '@tinkoff/invest-openapi-js-sdk';
+import { PlacedLimitOrder } from '@tinkoff/invest-openapi-js-sdk';
+import DBService from './DBService';
+import HelperService from './HelperService';
 import InvestorService from './InvestorService';
-import {BuyObject} from './TinkoffBuyService';
+import TinkoffOrderService from './TinkoffOrderService';
+import { OperationInfo } from './TinkoffService';
 
 class TinkoffSellService {
 
-    private marketInstrument: MarketInstrument | null = null;
-
-    private buyOperation: BuyObject = {
-      volume: 0,
-      placedLimitOrderId: '',
+    private operationInfo: OperationInfo = {
+      buy: {
+        limitOrderId: '',
+        price: 0,
+        comission: 0,
+      },
+      sell: {
+        limitOrderId: '',
+        price: 0,
+        comission: 0,
+      },
       fixedVolume: 0,
+      operationType: 'Sell',
+      marketInstrument: undefined,
     }
 
-    constructor(buyOperation: BuyObject, marketInstrument: MarketInstrument) {
-      this.buyOperation = buyOperation;
-      this.marketInstrument = marketInstrument;
+    constructor(operationInfo: OperationInfo) {
+      this.operationInfo = operationInfo;
     }
 
-    public sellLogic(maxAsk: number) {
+    public async sellLogic(maxAsk: number): Promise<OperationInfo> {
       console.log('Start Sell', maxAsk);
-      if (maxAsk > this.buyOperation.volume + InvestorService.getInvestorComission(this.buyOperation.volume))
-        console.log('Bigger!!!!!!!!! You ready to sell this');
+      console.log('maxAsk', maxAsk, 'waitingVolume', this.operationInfo.sell.price + InvestorService.getInvestorComission(this.operationInfo.sell.price));
+      if (maxAsk > 0) {
+      // if (maxAsk > this.buyOperation.volume + InvestorService.getInvestorComission(this.buyOperation.volume)) {
 
+        console.log('Bigger!!!!!!!!! You ready to sell this');
+        this.operationInfo.operationType = 'Buy';
+      }
+
+      return this.operationInfo;
     }
+
+    public async sell(price: number = 10) {
+      if (this.operationInfo.marketInstrument) {
+        try {
+          this.operationInfo.sell.price = price;
+          console.log('price', price);
+          const sellLimitOrder: PlacedLimitOrder | undefined = await TinkoffOrderService.createLimitOrder('Sell', this.operationInfo.marketInstrument, 1, this.operationInfo.sell.price);
+          if (sellLimitOrder)
+            this.operationInfo.sell.limitOrderId = sellLimitOrder.orderId || '';
+          else
+            throw Error('Order not created');
+
+        } catch (err) {
+          HelperService.errorHandler(err);
+        }
+      }
+    }
+
 }
 
 export default TinkoffSellService;

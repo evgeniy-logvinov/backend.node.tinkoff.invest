@@ -15,17 +15,20 @@
  */
 import { MarketInstrument } from '@tinkoff/invest-openapi-js-sdk';
 import knex from '../knex';
+import { Buy, OperationInfo } from './TinkoffService';
 
-interface Buy {
+interface HistoryBuy {
   figi: string;
-  buyVolume: number;
+  buyPrice: number;
   buyComission: number;
-  placedLimitOrderId: string;
+  buyOrderId: string;
 }
 
-interface Sell {
+interface HistorySell {
   figi: string;
-  sellVolume: number;
+  sellPrice: number;
+  sellComission: number;
+  sellOrderId: string;
 }
 
 const Instrument = () => knex('Instrument');
@@ -45,17 +48,36 @@ class DBService {
     }
   }
 
-  public async buyInstrument(buy: Buy) {
+  public async buyInstrument(operationInfo: OperationInfo) {
+    if (!operationInfo.marketInstrument)
+      throw new Error('Market is empty');
+
+    const historyBuy: HistoryBuy = {
+      buyComission: operationInfo.buy.comission,
+      buyPrice: operationInfo.buy.price,
+      buyOrderId: operationInfo.buy.limitOrderId,
+      figi: operationInfo.marketInstrument.figi
+    };
+
     try {
-      await InstrumentHistory().insert(buy);
+      await InstrumentHistory().insert(historyBuy);
     } catch (err) {
       console.log(err);
     }
   }
 
-  public async sellInstrument(sell: Sell) {
+  public async sellInstrument(operationInfo: OperationInfo) {
+    if (!operationInfo.marketInstrument)
+      throw new Error('Market is empty');
+
+    const historySell: HistorySell = {
+      figi: operationInfo.marketInstrument.figi,
+      sellComission: operationInfo.sell.comission,
+      sellOrderId: operationInfo.sell.limitOrderId,
+      sellPrice: operationInfo.sell.price,
+    };
     try {
-      await InstrumentHistory().where('figi', sell.figi).whereNull('sellVolume').update({sellVolume: sell.sellVolume});
+      await InstrumentHistory().where('figi', historySell.figi).whereNull('sellVolume').update(historySell);
     } catch (err) {
       console.log(err);
     }

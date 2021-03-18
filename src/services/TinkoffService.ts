@@ -21,21 +21,45 @@ import HelperService from './HelperService';
 import TinkoffBuyService from './TinkoffBuyService';
 import TinkoffSellService from './TinkoffSellService';
 
+export interface Buy {
+  price: number;
+  comission: number;
+  limitOrderId: string;
+}
+
+export interface Sell {
+  price: number;
+  comission: number;
+  limitOrderId: string;
+}
+export interface OperationInfo {
+  buy: Buy;
+  sell: Sell
+  fixedVolume: number;
+  operationType: OperationType;
+  marketInstrument?: MarketInstrument;
+}
 class TinkoffService {
     private maxValue = 0;
 
     private orderbookInProgress: Function = () => {};
 
-    private operationType: OperationType = 'Buy';
-
     private ticker: string;
 
-    private marketInstrument: MarketInstrument | null = null;
-
-    private buyOperation = {
-      volume: 0,
-      placedLimitOrderId: '',
+    private operationInfo: OperationInfo = {
+      buy: {
+        limitOrderId: '',
+        price: 0,
+        comission: 0,
+      },
+      sell: {
+        limitOrderId: '',
+        price: 0,
+        comission: 0,
+      },
       fixedVolume: 0,
+      operationType: 'Buy',
+      marketInstrument: undefined,
     }
 
     constructor({ticker}: {ticker: string}) {
@@ -43,19 +67,19 @@ class TinkoffService {
     }
 
     public startOrderbookCheckByDepth = async (depth: Depth = 10): Promise<void> => {
-      if (this.marketInstrument) {
-        this.orderbookInProgress = api.orderbook({ figi: this.marketInstrument.figi, depth }, async x => {
-          if (this.operationType === 'Buy') {
-            if (this.marketInstrument) {
-              const tinkoffBuyService = new TinkoffBuyService(this.buyOperation, this.marketInstrument);
-              const {buyOperation, operationType} = await tinkoffBuyService.buyLogic(x.bids[0][0]);
-              this.operationType = operationType;
-              this.buyOperation = buyOperation;
+      if (this.operationInfo.marketInstrument) {
+        this.orderbookInProgress = api.orderbook({ figi: this.operationInfo.marketInstrument.figi, depth }, async x => {
+          if (this.operationInfo.operationType === 'Buy') {
+            if (this.operationInfo.marketInstrument) {
+              const tinkoffBuyService = new TinkoffBuyService(this.operationInfo);
+              const operationInfo = await tinkoffBuyService.buyLogic(x.bids[0][0]);
+              this.operationInfo = operationInfo;
             }
           } else {
-            if (this.marketInstrument) {
-              const tinkoffSellService = new TinkoffSellService(this.buyOperation, this.marketInstrument);
-              await tinkoffSellService.sellLogic(x.asks[0][0]);
+            if (this.operationInfo.marketInstrument) {
+              const tinkoffSellService = new TinkoffSellService(this.operationInfo);
+              const operationInfo = await tinkoffSellService.sellLogic(x.asks[0][0]);
+              this.operationInfo = operationInfo;
             }
           }
         });
@@ -98,27 +122,24 @@ class TinkoffService {
 
     public searchOneByTicker = async (ticker: string): Promise<MarketInstrument | undefined> => {
       try {
-        const marketInstrument = await api.searchOne({ ticker }) as MarketInstrument;
-        // const marketInstrument = await api.searchOne({ ticker: 'AAPL' }) as MarketInstrument;
-        return marketInstrument;
+        return await api.searchOne({ ticker }) as MarketInstrument;
       } catch (err) {
         HelperService.errorHandler(err);
       }
     }
 
     public getInstrument() {
-      return this.marketInstrument;
+      return this.operationInfo.marketInstrument;
     }
 
     public fillInstrument = async (): Promise<void> => {
       try {
-        const marketInstrument = await api.searchOne({ ticker: this.ticker }) as MarketInstrument;
-        this.marketInstrument = marketInstrument;
+        this.operationInfo.marketInstrument = await api.searchOne({ ticker: this.ticker }) as MarketInstrument;
 
-        if (!marketInstrument)
+        if (!this.operationInfo.marketInstrument)
           throw Error(`Can't find instrument ${this.ticker}`);
 
-        await DBService.save(marketInstrument);
+        await DBService.save(this.operationInfo.marketInstrument);
       } catch (err) {
         HelperService.errorHandler(err);
       }

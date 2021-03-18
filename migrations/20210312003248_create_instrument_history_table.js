@@ -17,10 +17,12 @@ exports.up = function(knex) {
   return knex.schema.createTable('InstrumentHistory', function(table) {
     table.uuid('id').defaultTo(knex.raw('uuid_generate_v4()')).primary();
     table.string('figi').notNullable();
-    table.decimal('buyVolume').notNullable();
-    table.string('placedLimitOrderId');
+    table.decimal('buyPrice').notNullable();
+    table.string('buyOrderId');
     table.string('buyComission');
-    table.decimal('sellVolume');
+    table.decimal('sellPrice');
+    table.decimal('sellComission');
+    table.string('sellOrderId');
     table.foreign('figi').references('Instrument.figi');
     table.timestamp('createdAt',{ useTz: false }).defaultTo(knex.fn.now());
   });
