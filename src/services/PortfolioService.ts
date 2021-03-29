@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import api from './ApiService';
-import { MarketInstrument, MarketInstrumentList } from '@tinkoff/invest-openapi-js-sdk';
+import { MarketInstrument, MarketInstrumentList, PortfolioPosition } from '@tinkoff/invest-openapi-js-sdk';
 import HelperService from './HelperService';
 
 class PortfolioService {
@@ -45,13 +45,9 @@ class PortfolioService {
       }
     }
 
-    public getInstrumentPortfolio = async ({figi}: MarketInstrument) => {
-      try {
-        const res = await api.instrumentPortfolio({ figi });
-        console.log('get instrument portfolio', res);
-      } catch (err) {
-        HelperService.errorHandler(err);
-      }
+    public getInstrumentPortfolio = async (ticker: string): Promise<PortfolioPosition | null> => {
+    // public getInstrumentPortfolio = async ({figi}: MarketInstrument) => {
+      return await api.instrumentPortfolio({ ticker });
     }
 
     public stocks = async (): Promise<MarketInstrumentList | undefined>  => {

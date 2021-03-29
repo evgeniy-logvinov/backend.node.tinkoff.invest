@@ -15,7 +15,8 @@
  */
 import { MarketInstrument } from '@tinkoff/invest-openapi-js-sdk';
 import knex from '../knex';
-import { Buy, OperationInfo } from './TinkoffService';
+import InvestorService from './InvestorService';
+import { OperationInfo } from './TinkoffService';
 
 interface HistoryBuy {
   figi: string;
@@ -53,7 +54,7 @@ class DBService {
       throw new Error('Market is empty');
 
     const historyBuy: HistoryBuy = {
-      buyComission: operationInfo.buy.comission,
+      buyComission: InvestorService.getInvestorComission(operationInfo.buy.price),
       buyPrice: operationInfo.buy.price,
       buyOrderId: operationInfo.buy.limitOrderId,
       figi: operationInfo.marketInstrument.figi
@@ -66,18 +67,38 @@ class DBService {
     }
   }
 
+  public async getCurrentOrder(operationInfo: OperationInfo): Promise<any> {
+    if (!operationInfo.marketInstrument)
+      throw new Error('Market is empty');
+
+    return await InstrumentHistory()
+        .where('figi', operationInfo.marketInstrument.figi)
+        .whereNull('sellOrderId')
+        .orderBy('createdAt', 'desc')
+        .first();
+  }
+
   public async sellInstrument(operationInfo: OperationInfo) {
     if (!operationInfo.marketInstrument)
       throw new Error('Market is empty');
 
     const historySell: HistorySell = {
       figi: operationInfo.marketInstrument.figi,
-      sellComission: operationInfo.sell.comission,
+      sellComission: InvestorService.getInvestorComission(operationInfo.sell.price),
       sellOrderId: operationInfo.sell.limitOrderId,
       sellPrice: operationInfo.sell.price,
     };
     try {
-      await InstrumentHistory().where('figi', historySell.figi).whereNull('sellVolume').update(historySell);
+      if (operationInfo.buy.limitOrderId) {
+        await InstrumentHistory().where('buyOrderId', operationInfo.buy.limitOrderId).update(historySell);
+      } else {
+        const order = await InstrumentHistory()
+            .where('figi', historySell.figi)
+            .whereNull('sellOrderId')
+            .orderBy('createdAt', 'desc')
+            .first();
+        await InstrumentHistory().where('id', order.id).update(historySell);
+      }
     } catch (err) {
       console.log(err);
     }

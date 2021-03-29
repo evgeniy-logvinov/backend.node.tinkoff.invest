@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { CandleResolution, CandleStreaming, MarketInstrument, Order, OrderbookStreaming, PlacedLimitOrder } from '@tinkoff/invest-openapi-js-sdk';
+import { CandleResolution, CandleStreaming, MarketInstrument, OperationType, Order, OrderbookStreaming, PlacedLimitOrder } from '@tinkoff/invest-openapi-js-sdk';
 import api from './ApiService';
 import HelperService from './HelperService';
 
@@ -56,7 +56,17 @@ class TinkoffOrderService {
     public static hasPlacedOrder = async (orderId: string): Promise<boolean | undefined> => {
       try {
         const orders: Order[] = await api.orders();
-        const currentOrder = orders.find(el => el.orderId);
+        const currentOrder = orders.find(el => el.orderId === orderId);
+        return !!currentOrder;
+      } catch (err) {
+        HelperService.errorHandler(err);
+      }
+    }
+
+    public static hasPlacedOrderByTicket = async (figi: string, operation: OperationType): Promise<boolean | undefined> => {
+      try {
+        const orders: Order[] = await api.orders();
+        const currentOrder = orders.find(el => el.operation === operation && el.figi === figi);
         return !!currentOrder;
       } catch (err) {
         HelperService.errorHandler(err);
