@@ -32,6 +32,38 @@ class CarrierService {
     await tinkoffService.fillOngoingSell();
     await tinkoffService.start();
   }
+
+  public EnergyTransfer = async () => {
+    const ticker = 'ET';
+    const tinkoffService = new TinkoffService({ticker});
+    await tinkoffService.fillInstrument();
+    await tinkoffService.fillOngoingSell();
+    await tinkoffService.start();
+  }
+
+  public AmericanAirlines = async () => {
+    const ticker = 'AAL';
+    const tinkoffService = new TinkoffService({ticker});
+    await tinkoffService.fillInstrument();
+    await tinkoffService.fillOngoingSell();
+    await tinkoffService.start();
+  }
+
+  public BakerHughes = async () => {
+    const ticker = 'BKR';
+    const tinkoffService = new TinkoffService({ticker});
+    await tinkoffService.fillInstrument();
+    await tinkoffService.fillOngoingSell();
+    await tinkoffService.start();
+  }
+
+  public Hess = async () => {
+    const ticker = 'HES';
+    const tinkoffService = new TinkoffService({ticker});
+    await tinkoffService.fillInstrument();
+    await tinkoffService.fillOngoingSell();
+    await tinkoffService.start();
+  }
 }
 // 1) Смотрим на текущий курс акции и смотрим куда она меняется.
 // 2.1) Если она идет верх то мы ее покупаем

@@ -19,7 +19,7 @@ exports.up = function(knex) {
     table.string('figi').notNullable();
     table.decimal('buyPrice').notNullable();
     table.string('buyOrderId');
-    table.string('buyComission');
+    table.decimal('buyComission');
     table.decimal('sellPrice');
     table.decimal('sellComission');
     table.string('sellOrderId');

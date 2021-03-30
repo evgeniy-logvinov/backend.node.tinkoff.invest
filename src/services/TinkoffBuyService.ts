@@ -20,19 +20,16 @@ import HelperService from './HelperService';
 import { OperationInfo } from './TinkoffService';
 
 class TinkoffBuyService {
-    private step = 1;
+    private step = 4;
 
     private previousVolumes: Set<number> = new Set();
 
     private operationInfo: OperationInfo = {
-      buy: {
-        limitOrderId: '',
-        price: 0,
-      },
-      sell: {
-        limitOrderId: '',
-        price: 0,
-      },
+      buyOrderId: '',
+      buyPrice: 0,
+      sellOrderId: '',
+      sellPrice: 0,
+      marketInstrument: undefined,
     }
 
     constructor(operationInfo: OperationInfo) {
@@ -42,19 +39,17 @@ class TinkoffBuyService {
     public async buyLogic(maxBid: number): Promise<OperationInfo> {
       if (this.operationInfo.marketInstrument && this.operationInfo.marketInstrument.figi) {
         const hasPlacedOrderByTicket = await TinkoffOrderService.hasPlacedOrderByTicket(this.operationInfo.marketInstrument.figi, 'Buy');
-        if (!hasPlacedOrderByTicket) {
-          console.log('Has not tickets Buy');
+        if (!hasPlacedOrderByTicket)
           await this.startCheckMaxBid(maxBid);
-        } else {
-          console.log('Has tickets Buy');
-        }
+        else
+          this.logs(`Has tickets Buy`);
+
       }
 
       return this.operationInfo;
     }
 
     private async startCheckMaxBid(maxBid: number) {
-      console.log('Max bid', maxBid, this.previousVolumes);
       if (!this.previousVolumes.size) {
         this.previousVolumes.add(maxBid);
       } else {
@@ -68,29 +63,28 @@ class TinkoffBuyService {
           this.previousVolumes.add(maxBid);
         }
 
-        console.log('this.previousVolumes', this.previousVolumes);
-
         if (this.previousVolumes.size >= this.step) {
-          console.log(`Previous volumes more than step. PreviousVolumes ${[...this.previousVolumes]} Step: ${this.step}`);
+          this.logs(`Previous volumes more than step. PreviousVolumes ${[...this.previousVolumes]} Step: ${this.step}`);
           this.previousVolumes.clear();
           const price = +(maxBid + this.getMinPriceIncrement()).toFixed(2);
           await this.buy(price);
         }
       }
+      this.logs(`Max bid: ${maxBid} | ${[...this.previousVolumes]}`);
     }
 
     public async buy(price: number = 10) {
       if (this.operationInfo.marketInstrument) {
         try {
-          this.operationInfo.buy.price = price;
-          const placedLimitOrder: PlacedLimitOrder | undefined = await TinkoffOrderService.createLimitOrder('Buy', this.operationInfo.marketInstrument, 1, this.operationInfo.buy.price);
+          this.operationInfo.buyPrice = price;
+          const placedLimitOrder: PlacedLimitOrder | undefined = await TinkoffOrderService.createLimitOrder('Buy', this.operationInfo.marketInstrument, 1, this.operationInfo.buyPrice);
 
           if (placedLimitOrder)
-            this.operationInfo.buy.limitOrderId = placedLimitOrder.orderId || '';
+            this.operationInfo.buyOrderId = placedLimitOrder.orderId || '';
           else
             throw Error('Order not created');
 
-          console.log('Ticket created order', price);
+          this.logs(`Ticket created order ${price}`);
           await DBService.buyInstrument(this.operationInfo);
         } catch (err) {
           HelperService.errorHandler(err);
@@ -100,6 +94,13 @@ class TinkoffBuyService {
 
     private getMinPriceIncrement = () => {
       return this.operationInfo.marketInstrument && this.operationInfo.marketInstrument.minPriceIncrement || 0;
+    }
+
+    private logs = (str: string) => {
+      if (this.operationInfo.marketInstrument) {
+        const logsString = this.operationInfo.marketInstrument.ticker + '    '.slice(0, 4 - this.operationInfo.marketInstrument.ticker.length);
+        console.log(`${logsString} | `, str);
+      }
     }
 }
 

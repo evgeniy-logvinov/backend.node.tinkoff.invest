@@ -22,6 +22,9 @@ console.log('sandboxToken', process.env.SANDBOX_TOKEN);
 if (process.env.SANDBOX_TOKEN) {
   const carrier = new CarrierService();
   carrier.Apple();
+  carrier.EnergyTransfer();
+  carrier.AmericanAirlines();
+  carrier.BakerHughes();
 } else {
   throw Error('Please fill sandbox token');
 }

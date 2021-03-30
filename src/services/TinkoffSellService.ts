@@ -22,88 +22,110 @@ import TinkoffOrderService from './TinkoffOrderService';
 import { OperationInfo } from './TinkoffService';
 
 class TinkoffSellService {
-    private step = 0;
+  private step = 4;
 
-    private previousVolumes: Set<number> = new Set();
+  private previousVolumes: Set<number> = new Set();
 
-    private operationInfo: OperationInfo = {
-      buy: {
-        limitOrderId: '',
-        price: 0,
-      },
-      sell: {
-        limitOrderId: '',
-        price: 0,
-      },
-      marketInstrument: undefined,
-    }
+  private operationInfo: OperationInfo = {
+    buyOrderId: '',
+    buyPrice: 0,
+    sellOrderId: '',
+    sellPrice: 0,
+    marketInstrument: undefined,
+  }
 
-    constructor(operationInfo: OperationInfo) {
-      this.operationInfo = operationInfo;
-    }
+  constructor(operationInfo: OperationInfo) {
+    this.operationInfo = operationInfo;
+  }
 
-    public async sellLogic(minAsk: number): Promise<OperationInfo> {
-      if (this.operationInfo.marketInstrument && this.operationInfo.marketInstrument.figi) {
-        const hasPlacedOrderByTicket = await TinkoffOrderService.hasPlacedOrderByTicket(this.operationInfo.marketInstrument.figi, 'Sell');
-        if (!hasPlacedOrderByTicket) {
-          console.log('Has not tickets Sell');
-          await this.startCheckMinAsk(minAsk);
-        } else {
-          console.log('Has tickets Buy');
-        }
-      }
-
-      return this.operationInfo;
+  public async sellLogic(minAsk: number): Promise<OperationInfo> {
+    if (this.operationInfo.marketInstrument && this.operationInfo.marketInstrument.figi) {
+      const hasPlacedOrderByTicket = await TinkoffOrderService.hasPlacedOrderByTicket(this.operationInfo.marketInstrument.figi, 'Sell');
+      if (!hasPlacedOrderByTicket)
+        await this.startCheckMinAsk(minAsk);
+      else
+        this.logs('Has tickets Sell');
 
     }
 
-    private async startCheckMinAsk(minAsk: number) {
-      console.log('Min ask', minAsk, this.previousVolumes);
-      if (!this.previousVolumes.size) {
+    return this.operationInfo;
+
+  }
+
+  private isCurrentSellPriceMoreThanBuy(minAsk: number): boolean {
+    const buyPrice = this.operationInfo.buyPrice;
+    const buyComission = InvestorService.getInvestorComission(buyPrice);
+    const sellPrice = this.getPrice(minAsk);
+    const sellComission = InvestorService.getInvestorComission(sellPrice);
+    const sellSumm = sellPrice + sellComission;
+    const buySumm = buyPrice + buyComission;
+    this.logs(`S: ${sellSumm} | B: ${buySumm}`);
+
+    if (sellSumm > buySumm) this.logs('Not usefull order');
+
+    return sellSumm > buySumm;
+  }
+
+  private async startCheckMinAsk(minAsk: number) {
+    if (!this.isCurrentSellPriceMoreThanBuy(minAsk))
+      return;
+
+    if (!this.previousVolumes.size) {
+      this.previousVolumes.add(minAsk);
+    } else {
+      const previousVolumesArray = [...this.previousVolumes];
+      const previousVolumesLessThanMinAsk = previousVolumesArray.filter(el => el < minAsk);
+
+      if (previousVolumesLessThanMinAsk.length === previousVolumesArray.length) {
+        this.previousVolumes.clear();
         this.previousVolumes.add(minAsk);
-      } else {
-        const previousVolumesArray = [...this.previousVolumes];
-        const previousVolumesLessThanMinAsk = previousVolumesArray.filter(el => el < minAsk);
+      } else if (!previousVolumesLessThanMinAsk.length) {
+        this.previousVolumes.add(minAsk);
+      }
 
-        if (previousVolumesLessThanMinAsk.length === previousVolumesArray.length) {
-          this.previousVolumes.clear();
-          this.previousVolumes.add(minAsk);
-        } else if (!previousVolumesLessThanMinAsk.length) {
-          this.previousVolumes.add(minAsk);
-        }
-
-        console.log('this.previousVolumes', this.previousVolumes);
-
-        if (this.previousVolumes.size >= this.step) {
-          console.log(`Previous volumes less than step. PreviousVolumes ${[...this.previousVolumes]} Step: ${this.step}`);
-          this.previousVolumes.clear();
-          const price = +(minAsk + this.getMinPriceIncrement()).toFixed(2);
-          await this.sell(price);
-        }
+      if (this.previousVolumes.size >= this.step) {
+        this.logs(`Previous volumes less than step. PreviousVolumes ${[...this.previousVolumes]} Step: ${this.step}`);
+        this.previousVolumes.clear();
+        const price = this.getPrice(minAsk);
+        await this.sell(price);
       }
     }
 
-    private getMinPriceIncrement = () => {
-      return this.operationInfo.marketInstrument && this.operationInfo.marketInstrument.minPriceIncrement || 0;
-    }
+    this.logs(`Min ask ${minAsk} ${[...this.previousVolumes]}`);
+  }
 
-    public async sell(price: number = 10) {
-      if (this.operationInfo.marketInstrument) {
-        try {
-          this.operationInfo.sell.price = price;
-          const placedLimitOrder: PlacedLimitOrder | undefined = await TinkoffOrderService.createLimitOrder('Sell', this.operationInfo.marketInstrument, 1, this.operationInfo.sell.price);
-          if (placedLimitOrder)
-            this.operationInfo.sell.limitOrderId = placedLimitOrder.orderId || '';
-          else
-            throw Error('Order not created');
+  private getPrice(price: number): number {
+    return +(price + this.getMinPriceIncrement()).toFixed(2);
+  }
 
-          console.log('Ticket created order', price);
-          await DBService.sellInstrument(this.operationInfo);
-        } catch (err) {
-          HelperService.errorHandler(err);
-        }
+  private getMinPriceIncrement = () => {
+    return this.operationInfo.marketInstrument && this.operationInfo.marketInstrument.minPriceIncrement || 0;
+  }
+
+  public async sell(price: number = 10) {
+    if (this.operationInfo.marketInstrument) {
+      try {
+        this.operationInfo.sellPrice = price;
+        const placedLimitOrder: PlacedLimitOrder | undefined = await TinkoffOrderService.createLimitOrder('Sell', this.operationInfo.marketInstrument, 1, this.operationInfo.sellPrice);
+        if (placedLimitOrder)
+          this.operationInfo.sellOrderId = placedLimitOrder.orderId || '';
+        else
+          throw Error('Order not created');
+
+        this.logs(`Ticket created order ${price}`);
+        await DBService.sellInstrument(this.operationInfo);
+      } catch (err) {
+        HelperService.errorHandler(err);
       }
     }
+  }
+
+  private logs = (str: string) => {
+    if (this.operationInfo.marketInstrument) {
+      const logsString = this.operationInfo.marketInstrument.ticker + '    '.slice(0, 4 - this.operationInfo.marketInstrument.ticker.length);
+      console.log(`${logsString} | `, str);
+    }
+  }
 }
 
 export default TinkoffSellService;

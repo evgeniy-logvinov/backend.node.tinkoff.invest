@@ -14,26 +14,18 @@
  * limitations under the License.
  */
 import api from './ApiService';
-import { Depth, MarketInstrument, Orderbook, Portfolio } from '@tinkoff/invest-openapi-js-sdk';
+import { MarketInstrument, Orderbook, Portfolio } from '@tinkoff/invest-openapi-js-sdk';
 import DBService from './DBService';
 import TinkoffOrderService from './TinkoffOrderService';
 import HelperService from './HelperService';
 import TinkoffBuyService from './TinkoffBuyService';
 import TinkoffSellService from './TinkoffSellService';
 
-export interface Buy {
-  price: number;
-  // comission: number;
-  limitOrderId: string;
-}
-
-export interface Sell {
-  price: number;
-  limitOrderId: string;
-}
 export interface OperationInfo {
-  buy: Buy;
-  sell: Sell
+  buyOrderId: string;
+  buyPrice: number,
+  sellPrice: number,
+  sellOrderId: string,
   marketInstrument?: MarketInstrument;
 }
 class TinkoffService {
@@ -48,18 +40,15 @@ class TinkoffService {
     private timerId: NodeJS.Timeout | undefined = undefined;
 
     private operationInfo: OperationInfo = {
-      buy: {
-        limitOrderId: '',
-        price: 0,
-      },
-      sell: {
-        limitOrderId: '',
-        price: 0,
-      },
+      buyOrderId: '',
+      buyPrice: 0,
+      sellOrderId: '',
+      sellPrice: 0,
       marketInstrument: undefined,
     }
 
     private sellService: TinkoffSellService | null = null;
+
     private buyService: TinkoffBuyService | null = null;
 
     constructor({ticker}: {ticker: string}) {
@@ -73,32 +62,27 @@ class TinkoffService {
       // Если есть акции в портфеле то перейти к логике продажи
       // Если есть неисполненные заявки на продажу то ничего не делать и ждать исполнения
       // Если есть неисполненные заявки на покупку то ничего не делать и ждать исполнения
-      // const portfolio = new PortfolioService();
-      // console.log(await api.orderbookGet({ figi: this.operationInfo.marketInstrument.figi, depth: 10 })); // получаем стакан по AAPL
-      console.log('Timeout start');
+      this.logs(`Timeout start for ticker`);
       const tickerPortfolio =  await api.instrumentPortfolio({ticker: this.ticker});
       const currentBalance = tickerPortfolio && tickerPortfolio.balance || 0;
-
-      // console.log(await api.accounts());
-      // console.log(await api.bonds());
       const portfolio: Portfolio = await api.portfolio();
       const USDPosition = portfolio.positions.find(el => el.ticker === 'USD000UTSTOM');
+
       if (USDPosition)
-        console.log('USD Position balance', USDPosition.balance);
+        this.logs(`USD Position balance ${USDPosition.balance}`);
 
       if (currentBalance > this.numberOfInstruments) {
-        throw new Error(`Some problems with balance. Number of Instruments more than expected currentBalance: ${currentBalance} numberOfInstruments ${this.numberOfInstruments}`);
+        throw Error(`Some problems with balance. Number of Instruments more than expected currentBalance: ${currentBalance} numberOfInstruments ${this.numberOfInstruments}`);
       } else {
-        console.log('Current ticker balance', currentBalance);
+        this.logs(`Number of tickers in portfolio ${currentBalance}`);
+
         if (this.operationInfo.marketInstrument) {
           const orderbook: Orderbook = await api.orderbookGet({ figi: this.operationInfo.marketInstrument.figi, depth: 10 });
 
           if (currentBalance === this.numberOfInstruments) {
-            console.log('Sell logic');
             const operationInfo = await this.sellService.sellLogic(orderbook.asks[0].price);
             this.operationInfo = operationInfo;
           } else {
-            console.log('Buy logic');
             const operationInfo = await this.buyService.buyLogic(orderbook.bids[0].price);
             this.operationInfo = operationInfo;
           }
@@ -106,6 +90,11 @@ class TinkoffService {
       }
 
       this.timerId = setTimeout(this.checkTicker, 2000);
+    }
+
+    private logs(str: string) {
+      const logsString = this.ticker + '    '.slice(0, 4 - this.ticker.length);
+      console.log(`${logsString} | `, str);
     }
 
     public start = () => {
@@ -116,50 +105,9 @@ class TinkoffService {
     }
 
     public finish = () => {
-      console.log('Timeout finish');
+      this.logs(`Timeout finish`);
       if (this.timerId)
         clearTimeout(this.timerId);
-    }
-
-    public startOrderbookCheckByDepth = async (depth: Depth = 10): Promise<void> => {
-      if (this.operationInfo.marketInstrument) {
-        const tinkoffBuyService = new TinkoffBuyService(this.operationInfo);
-        const tinkoffSellService = new TinkoffSellService(this.operationInfo);
-
-        this.orderbookInProgress = api.orderbook({ figi: this.operationInfo.marketInstrument.figi, depth }, async x => {
-          const tickerPortfolio =  await api.instrumentPortfolio({ticker: this.ticker});
-          const currentBalance = tickerPortfolio && tickerPortfolio.balance || 0;
-
-          if (currentBalance > this.numberOfInstruments) {
-            throw new Error(`Some problems with balance. Number of Instruments more than expected currentBalance: ${currentBalance} numberOfInstruments ${this.numberOfInstruments}`);
-          } else {
-            console.log('Current ticker balance', currentBalance);
-            if (this.operationInfo.marketInstrument) {
-              if (currentBalance === this.numberOfInstruments) {
-              // Логика продажи
-                console.log('Sell logic');
-                const operationInfo = await tinkoffSellService.sellLogic(x.asks[0][0]);
-                this.operationInfo = operationInfo;
-              } else {
-              // Логика покупки
-                console.log('Buy logic');
-                const operationInfo = await tinkoffBuyService.buyLogic(x.bids[0][0]);
-                this.operationInfo = operationInfo;
-              }
-            }
-          }
-        });
-        console.log('Orderbook started');
-      } else {
-        throw new Error('Market instrument is null');
-      }
-    }
-
-    public stopOrderbookCheckByDepth = async (): Promise<void> => {
-      if (this.orderbookInProgress) {
-        await this.orderbookInProgress();
-        console.log('Orderbook stoped');
-      } else {throw new Error('Orderbook not exists');}
     }
 
     public getCandle = async (marketInstrument: MarketInstrument) => {
@@ -215,8 +163,8 @@ class TinkoffService {
       try {
         const order: any = await DBService.getCurrentOrder(this.operationInfo);
         if (order) {
-          this.operationInfo.buy.limitOrderId = order.buyOrderId;
-          this.operationInfo.buy.price = order.buyPrice;
+          this.operationInfo.buyOrderId = order.buyOrderId;
+          this.operationInfo.buyPrice = order.buyPrice;
         }
       } catch (err) {
         HelperService.errorHandler(err);

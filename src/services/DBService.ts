@@ -54,9 +54,9 @@ class DBService {
       throw new Error('Market is empty');
 
     const historyBuy: HistoryBuy = {
-      buyComission: InvestorService.getInvestorComission(operationInfo.buy.price),
-      buyPrice: operationInfo.buy.price,
-      buyOrderId: operationInfo.buy.limitOrderId,
+      buyComission: InvestorService.getInvestorComission(operationInfo.buyPrice),
+      buyPrice: operationInfo.buyPrice,
+      buyOrderId: operationInfo.buyOrderId,
       figi: operationInfo.marketInstrument.figi
     };
 
@@ -84,13 +84,13 @@ class DBService {
 
     const historySell: HistorySell = {
       figi: operationInfo.marketInstrument.figi,
-      sellComission: InvestorService.getInvestorComission(operationInfo.sell.price),
-      sellOrderId: operationInfo.sell.limitOrderId,
-      sellPrice: operationInfo.sell.price,
+      sellComission: InvestorService.getInvestorComission(operationInfo.sellPrice),
+      sellOrderId: operationInfo.sellOrderId,
+      sellPrice: operationInfo.sellPrice,
     };
     try {
-      if (operationInfo.buy.limitOrderId) {
-        await InstrumentHistory().where('buyOrderId', operationInfo.buy.limitOrderId).update(historySell);
+      if (operationInfo.buyOrderId) {
+        await InstrumentHistory().where('buyOrderId', operationInfo.buyOrderId).update(historySell);
       } else {
         const order = await InstrumentHistory()
             .where('figi', historySell.figi)
