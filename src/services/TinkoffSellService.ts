@@ -26,6 +26,8 @@ class TinkoffSellService {
 
   private previousVolumes: Set<number> = new Set();
 
+  private currentMinAsk: number = 0;
+
   private operationInfo: OperationInfo = {
     buyOrderId: '',
     buyPrice: 0,
@@ -57,16 +59,39 @@ class TinkoffSellService {
     const buyComission = InvestorService.getInvestorComission(buyPrice);
     const sellPrice = this.getPrice(minAsk);
     const sellComission = InvestorService.getInvestorComission(sellPrice);
-    const sellSumm = sellPrice + sellComission;
-    const buySumm = buyPrice + buyComission;
-    this.logs(`S: ${sellSumm} | B: ${buySumm}`);
+    const sellSumm = +sellPrice + +sellComission;
+    const buySumm = +buyPrice + +buyComission;
+    const tax = InvestorService.getInvestorTax(sellPrice, sellComission, buyPrice, buyComission);
 
-    if (sellSumm > buySumm) this.logs('Not usefull order');
+    this.logs(`S: ${sellSumm} | B: ${buySumm} | Tax: ${tax}`);
+    const canSell = sellSumm > buySumm + tax;
+    if (!canSell) this.logs(`Not usefull order: S: ${sellSumm} T: ${tax} B: ${buySumm} Expected more: ${buySumm + tax}`);
 
-    return sellSumm > buySumm;
+    return canSell;
   }
 
   private async startCheckMinAsk(minAsk: number) {
+    if (!this.isCurrentSellPriceMoreThanBuy(minAsk))
+      return;
+
+    if (!this.currentMinAsk) {
+      this.currentMinAsk = minAsk;
+    } else {
+      if (this.currentMinAsk < minAsk)
+        this.currentMinAsk = minAsk;
+
+      if (this.currentMinAsk + this.step * this.getMinPriceIncrement() < minAsk) {
+        this.logs(`Current minAsk ${this.currentMinAsk} + ${this.step * this.getMinPriceIncrement()} ${minAsk}`);
+        this.currentMinAsk = 0;
+        const price = this.getPrice(minAsk);
+        await this.sell(price);
+      }
+    }
+
+    this.logs(`Min ask ${minAsk} ${[...this.previousVolumes]}`);
+  }
+
+  private async startCheckMinAskByStep(minAsk: number) {
     if (!this.isCurrentSellPriceMoreThanBuy(minAsk))
       return;
 
@@ -123,7 +148,7 @@ class TinkoffSellService {
   private logs = (str: string) => {
     if (this.operationInfo.marketInstrument) {
       const logsString = this.operationInfo.marketInstrument.ticker + '    '.slice(0, 4 - this.operationInfo.marketInstrument.ticker.length);
-      console.log(`${logsString} | `, str);
+      console.log(`${logsString} |  Sell  |`, str);
     }
   }
 }

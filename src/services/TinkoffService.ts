@@ -23,9 +23,9 @@ import TinkoffSellService from './TinkoffSellService';
 
 export interface OperationInfo {
   buyOrderId: string;
-  buyPrice: number,
-  sellPrice: number,
-  sellOrderId: string,
+  buyPrice: number;
+  sellPrice: number;
+  sellOrderId: string;
   marketInstrument?: MarketInstrument;
 }
 class TinkoffService {
@@ -56,40 +56,43 @@ class TinkoffService {
     }
 
     private checkTicker = async () => {
-      if (!this.buyService || !this.sellService)
-        throw new Error('Services is empty');
-      // Проверяем есть ли в потрфеле акции текущего продукта или есть ли открытые заявки по текущему продукту.
-      // Если есть акции в портфеле то перейти к логике продажи
-      // Если есть неисполненные заявки на продажу то ничего не делать и ждать исполнения
-      // Если есть неисполненные заявки на покупку то ничего не делать и ждать исполнения
-      this.logs(`Timeout start for ticker`);
-      const tickerPortfolio =  await api.instrumentPortfolio({ticker: this.ticker});
-      const currentBalance = tickerPortfolio && tickerPortfolio.balance || 0;
-      const portfolio: Portfolio = await api.portfolio();
-      const USDPosition = portfolio.positions.find(el => el.ticker === 'USD000UTSTOM');
+      try {
+        if (!this.buyService || !this.sellService)
+          throw new Error('Services is empty');
+        // Проверяем есть ли в потрфеле акции текущего продукта или есть ли открытые заявки по текущему продукту.
+        // Если есть акции в портфеле то перейти к логике продажи
+        // Если есть неисполненные заявки на продажу то ничего не делать и ждать исполнения
+        // Если есть неисполненные заявки на покупку то ничего не делать и ждать исполнения
+        const tickerPortfolio =  await api.instrumentPortfolio({ticker: this.ticker});
+        const currentBalance = tickerPortfolio && tickerPortfolio.balance || 0;
+        const portfolio: Portfolio = await api.portfolio();
+        const USDPosition = portfolio.positions.find(el => el.ticker === 'USD000UTSTOM');
 
-      if (USDPosition)
-        this.logs(`USD Position balance ${USDPosition.balance}`);
+        if (USDPosition)
+          this.logs(`USD Position balance ${USDPosition.balance}`);
 
-      if (currentBalance > this.numberOfInstruments) {
-        throw Error(`Some problems with balance. Number of Instruments more than expected currentBalance: ${currentBalance} numberOfInstruments ${this.numberOfInstruments}`);
-      } else {
-        this.logs(`Number of tickers in portfolio ${currentBalance}`);
+        if (currentBalance > this.numberOfInstruments) {
+          throw Error(`Some problems with balance. Number of Instruments more than expected currentBalance: ${currentBalance} numberOfInstruments ${this.numberOfInstruments}`);
+        } else {
+          this.logs(`Number of tickers in portfolio ${currentBalance}`);
 
-        if (this.operationInfo.marketInstrument) {
-          const orderbook: Orderbook = await api.orderbookGet({ figi: this.operationInfo.marketInstrument.figi, depth: 10 });
+          if (this.operationInfo.marketInstrument) {
+            const orderbook: Orderbook = await api.orderbookGet({ figi: this.operationInfo.marketInstrument.figi, depth: 10 });
 
-          if (currentBalance === this.numberOfInstruments) {
-            const operationInfo = await this.sellService.sellLogic(orderbook.asks[0].price);
-            this.operationInfo = operationInfo;
-          } else {
-            const operationInfo = await this.buyService.buyLogic(orderbook.bids[0].price);
-            this.operationInfo = operationInfo;
+            if (currentBalance === this.numberOfInstruments) {
+              const operationInfo = await this.sellService.sellLogic(orderbook.asks[0].price);
+              this.operationInfo = operationInfo;
+            } else {
+              const operationInfo = await this.buyService.buyLogic(orderbook.bids[0].price);
+              this.operationInfo = operationInfo;
+            }
           }
         }
-      }
 
-      this.timerId = setTimeout(this.checkTicker, 2000);
+        this.timerId = setTimeout(this.checkTicker, 2000);
+      } catch (err) {
+        HelperService.errorHandler(err);
+      }
     }
 
     private logs(str: string) {
@@ -101,11 +104,12 @@ class TinkoffService {
       this.buyService = new TinkoffBuyService(this.operationInfo);
       this.sellService = new TinkoffSellService(this.operationInfo);
 
+      this.logs(`Start`);
       this.timerId = setTimeout(this.checkTicker, 1000);
     }
 
     public finish = () => {
-      this.logs(`Timeout finish`);
+      this.logs(`Finish`);
       if (this.timerId)
         clearTimeout(this.timerId);
     }

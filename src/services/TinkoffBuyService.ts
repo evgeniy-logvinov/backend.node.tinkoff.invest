@@ -24,6 +24,8 @@ class TinkoffBuyService {
 
     private previousVolumes: Set<number> = new Set();
 
+    private currentMaxBid: number = 0;
+
     private operationInfo: OperationInfo = {
       buyOrderId: '',
       buyPrice: 0,
@@ -50,6 +52,24 @@ class TinkoffBuyService {
     }
 
     private async startCheckMaxBid(maxBid: number) {
+      if (!this.currentMaxBid) {
+        this.currentMaxBid = maxBid;
+      } else {
+        if (this.currentMaxBid > maxBid)
+          this.currentMaxBid = maxBid;
+
+        if (this.currentMaxBid + this.step * this.getMinPriceIncrement() < maxBid) {
+          this.logs(`Start buy. Current maxBid ${this.currentMaxBid} + ${this.step * this.getMinPriceIncrement()} ${maxBid}`);
+          this.currentMaxBid = 0;
+          const price = +(maxBid + this.getMinPriceIncrement()).toFixed(2);
+          await this.buy(price);
+        }
+      }
+
+      this.logs(`Max bid: ${maxBid} | ${[...this.previousVolumes]}`);
+    }
+
+    private async startCheckMaxBidByStep(maxBid: number) {
       if (!this.previousVolumes.size) {
         this.previousVolumes.add(maxBid);
       } else {
@@ -99,7 +119,7 @@ class TinkoffBuyService {
     private logs = (str: string) => {
       if (this.operationInfo.marketInstrument) {
         const logsString = this.operationInfo.marketInstrument.ticker + '    '.slice(0, 4 - this.operationInfo.marketInstrument.ticker.length);
-        console.log(`${logsString} | `, str);
+        console.log(`${logsString} |  Buy  |`, str);
       }
     }
 }

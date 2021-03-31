@@ -30,6 +30,7 @@ interface HistorySell {
   sellPrice: number;
   sellComission: number;
   sellOrderId: string;
+  tax: number;
 }
 
 const Instrument = () => knex('Instrument');
@@ -87,6 +88,7 @@ class DBService {
       sellComission: InvestorService.getInvestorComission(operationInfo.sellPrice),
       sellOrderId: operationInfo.sellOrderId,
       sellPrice: operationInfo.sellPrice,
+      tax: InvestorService.getInvestorTax(operationInfo.sellPrice, InvestorService.getInvestorComission(operationInfo.sellPrice), operationInfo.buyPrice, InvestorService.getInvestorComission(operationInfo.buyPrice)),
     };
     try {
       if (operationInfo.buyOrderId) {

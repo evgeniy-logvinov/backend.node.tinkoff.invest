@@ -22,6 +22,7 @@ exports.up = function(knex) {
     table.decimal('buyComission');
     table.decimal('sellPrice');
     table.decimal('sellComission');
+    table.decimal('tax');
     table.string('sellOrderId');
     table.foreign('figi').references('Instrument.figi');
     table.timestamp('createdAt',{ useTz: false }).defaultTo(knex.fn.now());

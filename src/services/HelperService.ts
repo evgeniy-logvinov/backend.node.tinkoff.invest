@@ -16,7 +16,7 @@
 export default class HelperService {
 
   public static errorHandler(err: any) {
-    console.log(err);
+    console.log('---->>>>>', err);
   }
 
 }
