@@ -1,2 +1,2 @@
 DELETE from "InstrumentHistory";
-DELETE from "Instrument";
+-- DELETE from "Instrument";

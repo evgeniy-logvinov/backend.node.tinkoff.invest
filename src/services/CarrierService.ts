@@ -20,46 +20,52 @@ class CarrierService {
 
   private testEnv = true;
 
+  public fillPortfolio = async () => {
+    const portfolioService = new PortfolioService();
+    // await portfolioService.sandboxClear();
+    if (this.testEnv)
+      portfolioService.setCurrenciesBalance('USD', 2000);
+  }
+
   public Apple = async () => {
     const ticker = 'AAPL';
-    const tinkoffService = new TinkoffService({ticker});
-    const portfolioService = new PortfolioService();
-    await portfolioService.sandboxClear();
-    if (this.testEnv)
-      portfolioService.setCurrenciesBalance('USD', 400);
-
-    await tinkoffService.fillInstrument();
-    await tinkoffService.fillOngoingSell();
-    await tinkoffService.start();
+    this.startProcess(ticker);
   }
 
   public EnergyTransfer = async () => {
     const ticker = 'ET';
-    const tinkoffService = new TinkoffService({ticker});
-    await tinkoffService.fillInstrument();
-    await tinkoffService.fillOngoingSell();
-    await tinkoffService.start();
+    this.startProcess(ticker);
   }
 
   public AmericanAirlines = async () => {
     const ticker = 'AAL';
-    const tinkoffService = new TinkoffService({ticker});
-    await tinkoffService.fillInstrument();
-    await tinkoffService.fillOngoingSell();
-    await tinkoffService.start();
+    this.startProcess(ticker);
   }
 
   public BakerHughes = async () => {
     const ticker = 'BKR';
-    const tinkoffService = new TinkoffService({ticker});
+    this.startProcess(ticker);
+  }
+
+  public Hess = async () => {
+    const ticker = 'HES';
+    this.startProcess(ticker);
+  }
+
+  private async startProcess(ticker: string) {
+    // this.startProcessInvestor(ticker);
+    this.startProcessTrader(ticker);
+  }
+
+  private startProcessTrader = async (ticker: string) => {
+    const tinkoffService = new TinkoffService(ticker, 'traider');
     await tinkoffService.fillInstrument();
     await tinkoffService.fillOngoingSell();
     await tinkoffService.start();
   }
 
-  public Hess = async () => {
-    const ticker = 'HES';
-    const tinkoffService = new TinkoffService({ticker});
+  private startProcessInvestor = async (ticker: string) => {
+    const tinkoffService = new TinkoffService(ticker);
     await tinkoffService.fillInstrument();
     await tinkoffService.fillOngoingSell();
     await tinkoffService.start();

@@ -31,6 +31,7 @@ class TinkoffBuyService {
       buyPrice: 0,
       sellOrderId: '',
       sellPrice: 0,
+      type: 'investor',
       marketInstrument: undefined,
     }
 
@@ -55,8 +56,10 @@ class TinkoffBuyService {
       if (!this.currentMaxBid) {
         this.currentMaxBid = maxBid;
       } else {
-        if (this.currentMaxBid > maxBid)
+        if (this.currentMaxBid > maxBid) {
           this.currentMaxBid = maxBid;
+          return;
+        }
 
         if (this.currentMaxBid + this.step * this.getMinPriceIncrement() < maxBid) {
           this.logs(`Start buy. Current maxBid ${this.currentMaxBid} + ${this.step * this.getMinPriceIncrement()} ${maxBid}`);
@@ -119,7 +122,7 @@ class TinkoffBuyService {
     private logs = (str: string) => {
       if (this.operationInfo.marketInstrument) {
         const logsString = this.operationInfo.marketInstrument.ticker + '    '.slice(0, 4 - this.operationInfo.marketInstrument.ticker.length);
-        console.log(`${logsString} |  Buy  |`, str);
+        console.log(`${logsString} |  Buy  |`, str, ' ', this.operationInfo.type);
       }
     }
 }

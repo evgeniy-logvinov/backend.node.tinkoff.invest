@@ -13,6 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+const billType = [
+  'investor',
+  'traider',
+];
 exports.up = function(knex) {
   return knex.schema.createTable('InstrumentHistory', function(table) {
     table.uuid('id').defaultTo(knex.raw('uuid_generate_v4()')).primary();
@@ -24,6 +28,7 @@ exports.up = function(knex) {
     table.decimal('sellComission');
     table.decimal('tax');
     table.string('sellOrderId');
+    table.enum('type', billType).notNullable();
     table.foreign('figi').references('Instrument.figi');
     table.timestamp('createdAt',{ useTz: false }).defaultTo(knex.fn.now());
   });

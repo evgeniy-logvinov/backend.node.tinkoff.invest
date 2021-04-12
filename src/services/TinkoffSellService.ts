@@ -33,6 +33,7 @@ class TinkoffSellService {
     buyPrice: 0,
     sellOrderId: '',
     sellPrice: 0,
+    type: 'investor',
     marketInstrument: undefined,
   }
 
@@ -56,11 +57,11 @@ class TinkoffSellService {
 
   private isCurrentSellPriceMoreThanBuy(minAsk: number): boolean {
     const buyPrice = this.operationInfo.buyPrice;
-    const buyComission = InvestorService.getInvestorComission(buyPrice);
+    const buyComission = this.operationInfo.type === 'investor' ? InvestorService.getInvestorComission(buyPrice) : InvestorService.getTraderComission(buyPrice);
     const sellPrice = this.getPrice(minAsk);
-    const sellComission = InvestorService.getInvestorComission(sellPrice);
-    const sellSumm = +sellPrice + +sellComission;
-    const buySumm = +buyPrice + +buyComission;
+    const sellComission = this.operationInfo.type === 'investor' ? InvestorService.getInvestorComission(sellPrice) : InvestorService.getTraderComission(sellPrice);
+    const sellSumm = +((+sellPrice - +sellComission - this.getMinPriceIncrement()).toFixed(2));
+    const buySumm = +((+buyPrice + +buyComission).toFixed(2));
     const tax = InvestorService.getInvestorTax(sellPrice, sellComission, buyPrice, buyComission);
 
     this.logs(`S: ${sellSumm} | B: ${buySumm} | Tax: ${tax}`);
@@ -77,10 +78,14 @@ class TinkoffSellService {
     if (!this.currentMinAsk) {
       this.currentMinAsk = minAsk;
     } else {
-      if (this.currentMinAsk < minAsk)
-        this.currentMinAsk = minAsk;
+      // console.log(this.currentMinAsk, minAsk, minAsk < this.currentMinAsk);
 
-      if (this.currentMinAsk + this.step * this.getMinPriceIncrement() < minAsk) {
+      if (this.currentMinAsk < minAsk) {
+        this.currentMinAsk = minAsk;
+        return;
+      }
+
+      if (this.currentMinAsk - this.step * this.getMinPriceIncrement() > minAsk) {
         this.logs(`Current minAsk ${this.currentMinAsk} + ${this.step * this.getMinPriceIncrement()} ${minAsk}`);
         this.currentMinAsk = 0;
         const price = this.getPrice(minAsk);
@@ -120,10 +125,10 @@ class TinkoffSellService {
   }
 
   private getPrice(price: number): number {
-    return +(price + this.getMinPriceIncrement()).toFixed(2);
+    return +(price - this.getMinPriceIncrement()).toFixed(2);
   }
 
-  private getMinPriceIncrement = () => {
+  private getMinPriceIncrement = (): number => {
     return this.operationInfo.marketInstrument && this.operationInfo.marketInstrument.minPriceIncrement || 0;
   }
 
@@ -148,7 +153,7 @@ class TinkoffSellService {
   private logs = (str: string) => {
     if (this.operationInfo.marketInstrument) {
       const logsString = this.operationInfo.marketInstrument.ticker + '    '.slice(0, 4 - this.operationInfo.marketInstrument.ticker.length);
-      console.log(`${logsString} |  Sell  |`, str);
+      console.log(`${logsString} |  Sell  |`, str, ' ', this.operationInfo.type);
     }
   }
 }

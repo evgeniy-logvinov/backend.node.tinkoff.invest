@@ -16,13 +16,14 @@
 import { MarketInstrument } from '@tinkoff/invest-openapi-js-sdk';
 import knex from '../knex';
 import InvestorService from './InvestorService';
-import { OperationInfo } from './TinkoffService';
+import { BillType, OperationInfo } from './TinkoffService';
 
 interface HistoryBuy {
   figi: string;
   buyPrice: number;
   buyComission: number;
   buyOrderId: string;
+  type: BillType;
 }
 
 interface HistorySell {
@@ -54,8 +55,13 @@ class DBService {
     if (!operationInfo.marketInstrument)
       throw new Error('Market is empty');
 
+    const buyComission = operationInfo.type === 'investor'
+      ? InvestorService.getInvestorComission(operationInfo.buyPrice)
+      : InvestorService.getTraderComission(operationInfo.buyPrice);
+
     const historyBuy: HistoryBuy = {
-      buyComission: InvestorService.getInvestorComission(operationInfo.buyPrice),
+      buyComission,
+      type: operationInfo.type,
       buyPrice: operationInfo.buyPrice,
       buyOrderId: operationInfo.buyOrderId,
       figi: operationInfo.marketInstrument.figi
@@ -74,6 +80,7 @@ class DBService {
 
     return await InstrumentHistory()
         .where('figi', operationInfo.marketInstrument.figi)
+        // .where('type', operationInfo.type)
         .whereNull('sellOrderId')
         .orderBy('createdAt', 'desc')
         .first();
@@ -83,12 +90,20 @@ class DBService {
     if (!operationInfo.marketInstrument)
       throw new Error('Market is empty');
 
+    const sellComission = operationInfo.type === 'investor'
+      ? InvestorService.getInvestorComission(operationInfo.sellPrice)
+      : InvestorService.getTraderComission(operationInfo.sellPrice);
+
+    const buyComission = operationInfo.type === 'investor'
+      ? InvestorService.getInvestorComission(operationInfo.buyPrice)
+      : InvestorService.getTraderComission(operationInfo.buyPrice);
+
     const historySell: HistorySell = {
       figi: operationInfo.marketInstrument.figi,
-      sellComission: InvestorService.getInvestorComission(operationInfo.sellPrice),
+      sellComission: sellComission,
       sellOrderId: operationInfo.sellOrderId,
       sellPrice: operationInfo.sellPrice,
-      tax: InvestorService.getInvestorTax(operationInfo.sellPrice, InvestorService.getInvestorComission(operationInfo.sellPrice), operationInfo.buyPrice, InvestorService.getInvestorComission(operationInfo.buyPrice)),
+      tax: InvestorService.getInvestorTax(operationInfo.sellPrice, sellComission, operationInfo.buyPrice, buyComission),
     };
     try {
       if (operationInfo.buyOrderId) {
@@ -96,6 +111,7 @@ class DBService {
       } else {
         const order = await InstrumentHistory()
             .where('figi', historySell.figi)
+            .where('type', operationInfo.type)
             .whereNull('sellOrderId')
             .orderBy('createdAt', 'desc')
             .first();

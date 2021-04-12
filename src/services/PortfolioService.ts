@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import api from './ApiService';
-import { MarketInstrument, MarketInstrumentList, PortfolioPosition } from '@tinkoff/invest-openapi-js-sdk';
+import { MarketInstrumentList, PortfolioPosition } from '@tinkoff/invest-openapi-js-sdk';
 import HelperService from './HelperService';
 
 class PortfolioService {

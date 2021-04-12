@@ -21,6 +21,7 @@ const app = express();
 console.log('sandboxToken', process.env.SANDBOX_TOKEN);
 if (process.env.SANDBOX_TOKEN) {
   const carrier = new CarrierService();
+  carrier.fillPortfolio();
   carrier.Apple();
   carrier.EnergyTransfer();
   carrier.AmericanAirlines();

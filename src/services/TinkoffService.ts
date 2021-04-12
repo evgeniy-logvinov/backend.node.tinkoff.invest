@@ -26,8 +26,12 @@ export interface OperationInfo {
   buyPrice: number;
   sellPrice: number;
   sellOrderId: string;
+  type: BillType;
   marketInstrument?: MarketInstrument;
 }
+
+export type BillType = 'investor' | 'traider';
+
 class TinkoffService {
     private maxValue = 0;
 
@@ -44,6 +48,7 @@ class TinkoffService {
       buyPrice: 0,
       sellOrderId: '',
       sellPrice: 0,
+      type: 'investor',
       marketInstrument: undefined,
     }
 
@@ -51,8 +56,9 @@ class TinkoffService {
 
     private buyService: TinkoffBuyService | null = null;
 
-    constructor({ticker}: {ticker: string}) {
+    constructor(ticker: string, type: BillType = 'investor') {
       this.ticker = ticker;
+      this.operationInfo.type = type;
     }
 
     private checkTicker = async () => {
@@ -66,7 +72,7 @@ class TinkoffService {
         const tickerPortfolio =  await api.instrumentPortfolio({ticker: this.ticker});
         const currentBalance = tickerPortfolio && tickerPortfolio.balance || 0;
         const portfolio: Portfolio = await api.portfolio();
-        const USDPosition = portfolio.positions.find(el => el.ticker === 'USD000UTSTOM');
+        const USDPosition = portfolio.positions.find(el => el.ticker === this.ticker);
 
         if (USDPosition)
           this.logs(`USD Position balance ${USDPosition.balance}`);
@@ -78,7 +84,8 @@ class TinkoffService {
 
           if (this.operationInfo.marketInstrument) {
             const orderbook: Orderbook = await api.orderbookGet({ figi: this.operationInfo.marketInstrument.figi, depth: 10 });
-
+            // console.log('orderbookasks', orderbook.asks);
+            // console.log('orderbookbids', orderbook.bids);
             if (currentBalance === this.numberOfInstruments) {
               const operationInfo = await this.sellService.sellLogic(orderbook.asks[0].price);
               this.operationInfo = operationInfo;
@@ -88,10 +95,10 @@ class TinkoffService {
             }
           }
         }
-
-        this.timerId = setTimeout(this.checkTicker, 2000);
       } catch (err) {
         HelperService.errorHandler(err);
+      } finally {
+        this.timerId = setTimeout(this.checkTicker, 2000);
       }
     }
 
@@ -101,11 +108,12 @@ class TinkoffService {
     }
 
     public start = () => {
+      console.log('this.operationInfo', this.operationInfo);
       this.buyService = new TinkoffBuyService(this.operationInfo);
       this.sellService = new TinkoffSellService(this.operationInfo);
 
       this.logs(`Start`);
-      this.timerId = setTimeout(this.checkTicker, 1000);
+      this.timerId = setTimeout(this.checkTicker, 2000);
     }
 
     public finish = () => {
@@ -117,24 +125,24 @@ class TinkoffService {
     public getCandle = async (marketInstrument: MarketInstrument) => {
       // https://tinkoffcreditsystems.github.io/invest-openapi/marketdata/
       api.candle({figi: marketInstrument.figi, interval: '5min'}, x => {
-        const candleMaxValue = x.h;
-        const candleTradingVolume = x.v;
+        // const candleMaxValue = x.h;
+        // const candleTradingVolume = x.v;
 
         if (x.c > x.o)
           TinkoffOrderService.drawCandleUp(x);
         else
           TinkoffOrderService.drawCandleDown(x);
 
-        if (!!process.env.debug)
-          console.log('candleTradingVolume', candleTradingVolume);
+        // if (!!process.env.debug)
+        // console.log('candleTradingVolume', candleTradingVolume);
 
-        const finalVolume = this.getInvestorVolumes(candleMaxValue);
-        if (Number(finalVolume) > this.maxValue) {
-          this.maxValue = Number(finalVolume);
-          console.log('------------------------------>New max value', this.maxValue);
-        }
-        this.getTraderVolumes(candleMaxValue);
-        console.log('------------------------------>Max value', this.maxValue);
+        // const finalVolume = this.getInvestorVolumes(candleMaxValue);
+        // if (Number(finalVolume) > this.maxValue) {
+        //   this.maxValue = Number(finalVolume);
+        //   console.log('------------------------------>New max value', this.maxValue);
+        // }
+        // InvestorService.getTraderVolumes(candleMaxValue);
+        // console.log('------------------------------>Max value', this.maxValue);
       });
     }
 
@@ -166,37 +174,13 @@ class TinkoffService {
     public fillOngoingSell = async (): Promise<void> => {
       try {
         const order: any = await DBService.getCurrentOrder(this.operationInfo);
+        console.log('order',  order);
         if (order) {
           this.operationInfo.buyOrderId = order.buyOrderId;
           this.operationInfo.buyPrice = order.buyPrice;
         }
       } catch (err) {
         HelperService.errorHandler(err);
-      }
-    }
-
-    private getInvestorVolumes = (value: number) => {
-      const comissionInvestor = this.getInvestorComission(value);
-      const finalValueInvestor = (value + comissionInvestor).toFixed(2);
-      if (!!process.env.debug) {
-        console.log('Investor-------------->');
-        console.log('comission Investor', comissionInvestor);
-        console.log('Sum Investor', finalValueInvestor);
-      }
-      return finalValueInvestor;
-    }
-
-    private getInvestorComission = (volume: number) => {
-      return Math.round(volume * 0.3) / 100;
-    }
-
-    private getTraderVolumes = (value: number) => {
-      const comissionTrader = Math.round(value * 0.05) / 100;
-      const finalValueTrader = (value + comissionTrader).toFixed(2);
-      if (!!process.env.debug) {
-        console.log('Trader---------------->');
-        console.log('comission Trader', comissionTrader);
-        console.log('Sum Trader', finalValueTrader);
       }
     }
 }

@@ -22,6 +22,10 @@ class InvestorService {
     public static getInvestorTax = (sellPrice: number, sellComm: number, buyPrice: number, buyComm: number): number => {
       return +(Math.round((sellPrice - sellComm - buyPrice - buyComm) / 100 * 13)).toFixed(2);
     }
+
+    public static getTraderComission = (value: number) => {
+      return Math.round(value * 0.05) / 100;
+    }
 }
 
 export default InvestorService;
