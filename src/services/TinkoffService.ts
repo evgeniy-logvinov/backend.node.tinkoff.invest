@@ -14,124 +14,36 @@
  * limitations under the License.
  */
 import api from './ApiService';
-import { MarketInstrument, Orderbook, Portfolio } from '@tinkoff/invest-openapi-js-sdk';
+import { CandleResolution, Candles, Depth, MarketInstrument, Orderbook, PortfolioPosition } from '@tinkoff/invest-openapi-js-sdk';
 import DBService from './DBService';
-import TinkoffOrderService from './TinkoffOrderService';
-import HelperService from './HelperService';
-import TinkoffBuyService from './TinkoffBuyService';
-import TinkoffSellService from './TinkoffSellService';
-
-export interface OperationInfo {
-  buyOrderId: string;
-  buyPrice: number;
-  sellPrice: number;
-  sellOrderId: string;
-  type: BillType;
-  marketInstrument?: MarketInstrument;
-}
-
-export type BillType = 'investor' | 'traider';
+import OrderService from './OrderService';
+import moment from 'moment';
 
 class TinkoffService {
-    private maxValue = 0;
-
-    private numberOfInstruments = 1;
-
     private orderbookInProgress: Function = () => {};
 
-    private ticker: string;
-
-    private timerId: NodeJS.Timeout | undefined = undefined;
-
-    private operationInfo: OperationInfo = {
-      buyOrderId: '',
-      buyPrice: 0,
-      sellOrderId: '',
-      sellPrice: 0,
-      type: 'investor',
-      marketInstrument: undefined,
+    static getTickerPortfolio = async (figi: string): Promise<PortfolioPosition | null> => {
+      return await api.instrumentPortfolio({figi});
     }
 
-    private sellService: TinkoffSellService | null = null;
-
-    private buyService: TinkoffBuyService | null = null;
-
-    constructor(ticker: string, type: BillType = 'investor') {
-      this.ticker = ticker;
-      this.operationInfo.type = type;
+    static getOrderbook = async (figi: string, depth: Depth = 10): Promise<Orderbook> => {
+      return await api.orderbookGet({ figi, depth });
     }
 
-    private checkTicker = async () => {
-      try {
-        if (!this.buyService || !this.sellService)
-          throw new Error('Services is empty');
-        // Проверяем есть ли в потрфеле акции текущего продукта или есть ли открытые заявки по текущему продукту.
-        // Если есть акции в портфеле то перейти к логике продажи
-        // Если есть неисполненные заявки на продажу то ничего не делать и ждать исполнения
-        // Если есть неисполненные заявки на покупку то ничего не делать и ждать исполнения
-        const tickerPortfolio =  await api.instrumentPortfolio({ticker: this.ticker});
-        const currentBalance = tickerPortfolio && tickerPortfolio.balance || 0;
-        const portfolio: Portfolio = await api.portfolio();
-        const USDPosition = portfolio.positions.find(el => el.ticker === this.ticker);
-
-        if (USDPosition)
-          this.logs(`USD Position balance ${USDPosition.balance}`);
-
-        if (currentBalance > this.numberOfInstruments) {
-          throw Error(`Some problems with balance. Number of Instruments more than expected currentBalance: ${currentBalance} numberOfInstruments ${this.numberOfInstruments}`);
-        } else {
-          this.logs(`Number of tickers in portfolio ${currentBalance}`);
-
-          if (this.operationInfo.marketInstrument) {
-            const orderbook: Orderbook = await api.orderbookGet({ figi: this.operationInfo.marketInstrument.figi, depth: 10 });
-            // console.log('orderbookasks', orderbook.asks);
-            // console.log('orderbookbids', orderbook.bids);
-            if (currentBalance === this.numberOfInstruments) {
-              const operationInfo = await this.sellService.sellLogic(orderbook.asks[0].price);
-              this.operationInfo = operationInfo;
-            } else {
-              const operationInfo = await this.buyService.buyLogic(orderbook.bids[0].price);
-              this.operationInfo = operationInfo;
-            }
-          }
-        }
-      } catch (err) {
-        HelperService.errorHandler(err);
-      } finally {
-        this.timerId = setTimeout(this.checkTicker, 2000);
-      }
+    static getCandle = async (figi: string, interval: CandleResolution = '1min'): Promise<Candles> => {
+      return await api.candlesGet({ figi, interval, from: moment().format(), to: moment().format() });
     }
 
-    private logs(str: string) {
-      const logsString = this.ticker + '    '.slice(0, 4 - this.ticker.length);
-      console.log(`${logsString} | `, str);
-    }
-
-    public start = () => {
-      console.log('this.operationInfo', this.operationInfo);
-      this.buyService = new TinkoffBuyService(this.operationInfo);
-      this.sellService = new TinkoffSellService(this.operationInfo);
-
-      this.logs(`Start`);
-      this.timerId = setTimeout(this.checkTicker, 2000);
-    }
-
-    public finish = () => {
-      this.logs(`Finish`);
-      if (this.timerId)
-        clearTimeout(this.timerId);
-    }
-
-    public getCandle = async (marketInstrument: MarketInstrument) => {
+    static candle = async (marketInstrument: MarketInstrument) => {
       // https://tinkoffcreditsystems.github.io/invest-openapi/marketdata/
       api.candle({figi: marketInstrument.figi, interval: '5min'}, x => {
         // const candleMaxValue = x.h;
         // const candleTradingVolume = x.v;
 
         if (x.c > x.o)
-          TinkoffOrderService.drawCandleUp(x);
+          OrderService.drawCandleUp(x);
         else
-          TinkoffOrderService.drawCandleDown(x);
+          OrderService.drawCandleDown(x);
 
         // if (!!process.env.debug)
         // console.log('candleTradingVolume', candleTradingVolume);
@@ -146,42 +58,17 @@ class TinkoffService {
       });
     }
 
-    public searchOneByTicker = async (ticker: string): Promise<MarketInstrument | undefined> => {
-      try {
-        return await api.searchOne({ ticker }) as MarketInstrument;
-      } catch (err) {
-        HelperService.errorHandler(err);
-      }
+    public searchOneByTicker = async (ticker: string): Promise<MarketInstrument> => {
+      return await api.searchOne({ ticker }) as MarketInstrument;
     }
 
-    public getInstrument() {
-      return this.operationInfo.marketInstrument;
-    }
+    static getInstrument = async (ticker: string): Promise<MarketInstrument> => {
+      const marketInstrument = await api.searchOne({ ticker }) as MarketInstrument;
+      if (!marketInstrument)
+        throw Error(`Can't find instrument ${ticker}`);
 
-    public fillInstrument = async (): Promise<void> => {
-      try {
-        this.operationInfo.marketInstrument = await api.searchOne({ ticker: this.ticker }) as MarketInstrument;
-
-        if (!this.operationInfo.marketInstrument)
-          throw Error(`Can't find instrument ${this.ticker}`);
-
-        await DBService.save(this.operationInfo.marketInstrument);
-      } catch (err) {
-        HelperService.errorHandler(err);
-      }
-    }
-
-    public fillOngoingSell = async (): Promise<void> => {
-      try {
-        const order: any = await DBService.getCurrentOrder(this.operationInfo);
-        console.log('order',  order);
-        if (order) {
-          this.operationInfo.buyOrderId = order.buyOrderId;
-          this.operationInfo.buyPrice = order.buyPrice;
-        }
-      } catch (err) {
-        HelperService.errorHandler(err);
-      }
+      await DBService.save(marketInstrument);
+      return marketInstrument;
     }
 }
 

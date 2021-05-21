@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import PortfolioService from './PortfolioService';
+import ScalpService from './ScalpService';
 import TinkoffService from './TinkoffService';
 
 class CarrierService {
@@ -22,13 +23,18 @@ class CarrierService {
 
   public fillPortfolio = async () => {
     const portfolioService = new PortfolioService();
-    // await portfolioService.sandboxClear();
+    await portfolioService.sandboxClear();
     if (this.testEnv)
-      portfolioService.setCurrenciesBalance('USD', 2000);
+      portfolioService.setCurrenciesBalance('USD', 4000);
   }
 
   public Apple = async () => {
     const ticker = 'AAPL';
+    this.startProcess(ticker);
+  }
+
+  public Baidu = async () => {
+    const ticker = 'BIDU';
     this.startProcess(ticker);
   }
 
@@ -54,21 +60,36 @@ class CarrierService {
 
   private async startProcess(ticker: string) {
     // this.startProcessInvestor(ticker);
-    this.startProcessTrader(ticker);
+    // this.startProcessTrader(ticker);
+    // this.startProcessTraderCandle(ticker);
+    this.startProcessScalp(ticker);
+  }
+
+  startProcessScalp = async (ticker: string) => {
+    const marketInstrument = await TinkoffService.getInstrument(ticker);
+    const scalpService = new ScalpService(marketInstrument, 1, 'traider');
+    scalpService.start();
+  }
+
+  private async startProcessTraderCandle(ticker: string) {
+    // const tinkoff = new TinkoffServiceCandle(ticker, 'traider', 1);
+    // await tinkoff.fillInstrument();
+    // await tinkoff.fillOngoingSell();
+    // await tinkoff.start();
   }
 
   private startProcessTrader = async (ticker: string) => {
-    const tinkoffService = new TinkoffService(ticker, 'traider');
-    await tinkoffService.fillInstrument();
-    await tinkoffService.fillOngoingSell();
-    await tinkoffService.start();
+    // const tinkoffService = new TinkoffService(ticker, 'traider');
+    // await tinkoffService.fillInstrument();
+    // await tinkoffService.fillOngoingSell();
+    // await tinkoffService.start();
   }
 
   private startProcessInvestor = async (ticker: string) => {
-    const tinkoffService = new TinkoffService(ticker);
-    await tinkoffService.fillInstrument();
-    await tinkoffService.fillOngoingSell();
-    await tinkoffService.start();
+    // const tinkoffService = new TinkoffService(ticker);
+    // await tinkoffService.fillInstrument();
+    // await tinkoffService.fillOngoingSell();
+    // await tinkoffService.start();
   }
 }
 // 1) Смотрим на текущий курс акции и смотрим куда она меняется.

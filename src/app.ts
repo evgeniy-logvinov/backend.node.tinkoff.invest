@@ -15,17 +15,23 @@
  */
 import express from 'express';
 import CarrierService from './services/CarrierService';
+import HelperService from './services/HelperService';
 
 const app = express();
 
 console.log('sandboxToken', process.env.SANDBOX_TOKEN);
 if (process.env.SANDBOX_TOKEN) {
-  const carrier = new CarrierService();
-  carrier.fillPortfolio();
-  carrier.Apple();
-  carrier.EnergyTransfer();
-  carrier.AmericanAirlines();
-  carrier.BakerHughes();
+  try {
+    const carrier = new CarrierService();
+    carrier.fillPortfolio();
+    carrier.Apple();
+    carrier.Baidu();
+    carrier.EnergyTransfer();
+    carrier.AmericanAirlines();
+    carrier.BakerHughes();
+  } catch (err) {
+    HelperService.errorHandler(err);
+  }
 } else {
   throw Error('Please fill sandbox token');
 }

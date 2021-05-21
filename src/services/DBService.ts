@@ -16,7 +16,7 @@
 import { MarketInstrument } from '@tinkoff/invest-openapi-js-sdk';
 import knex from '../knex';
 import InvestorService from './InvestorService';
-import { BillType, OperationInfo } from './TinkoffService';
+import { BillType, OperationInfo } from './ScalpService';
 
 interface HistoryBuy {
   figi: string;
@@ -51,20 +51,16 @@ class DBService {
     }
   }
 
-  public async buyInstrument(operationInfo: OperationInfo) {
-    if (!operationInfo.marketInstrument)
-      throw new Error('Market is empty');
-
-    const buyComission = operationInfo.type === 'investor'
+  public async buyInstrument(figi: string, operationInfo: OperationInfo, type: BillType) {
+    const buyComission = type === 'investor'
       ? InvestorService.getInvestorComission(operationInfo.buyPrice)
       : InvestorService.getTraderComission(operationInfo.buyPrice);
 
     const historyBuy: HistoryBuy = {
       buyComission,
-      type: operationInfo.type,
-      buyPrice: operationInfo.buyPrice,
-      buyOrderId: operationInfo.buyOrderId,
-      figi: operationInfo.marketInstrument.figi
+      type,
+      figi,
+      ...operationInfo,
     };
 
     try {
@@ -74,36 +70,29 @@ class DBService {
     }
   }
 
-  public async getCurrentOrder(operationInfo: OperationInfo): Promise<any> {
-    if (!operationInfo.marketInstrument)
-      throw new Error('Market is empty');
-
+  public async getCurrentOrder(figi: string): Promise<any> {
     return await InstrumentHistory()
-        .where('figi', operationInfo.marketInstrument.figi)
+        .where('figi', figi)
         // .where('type', operationInfo.type)
         .whereNull('sellOrderId')
         .orderBy('createdAt', 'desc')
         .first();
   }
 
-  public async sellInstrument(operationInfo: OperationInfo) {
-    if (!operationInfo.marketInstrument)
-      throw new Error('Market is empty');
-
-    const sellComission = operationInfo.type === 'investor'
+  public async sellInstrument(figi: string, operationInfo: OperationInfo, type: BillType) {
+    const sellComission = type === 'investor'
       ? InvestorService.getInvestorComission(operationInfo.sellPrice)
       : InvestorService.getTraderComission(operationInfo.sellPrice);
 
-    const buyComission = operationInfo.type === 'investor'
+    const buyComission = type === 'investor'
       ? InvestorService.getInvestorComission(operationInfo.buyPrice)
       : InvestorService.getTraderComission(operationInfo.buyPrice);
 
     const historySell: HistorySell = {
-      figi: operationInfo.marketInstrument.figi,
+      figi,
       sellComission: sellComission,
-      sellOrderId: operationInfo.sellOrderId,
-      sellPrice: operationInfo.sellPrice,
-      tax: InvestorService.getInvestorTax(operationInfo.sellPrice, sellComission, operationInfo.buyPrice, buyComission),
+      tax: InvestorService.getTax(operationInfo.sellPrice, sellComission, operationInfo.buyPrice, buyComission),
+      ...operationInfo,
     };
     try {
       if (operationInfo.buyOrderId) {
@@ -111,7 +100,7 @@ class DBService {
       } else {
         const order = await InstrumentHistory()
             .where('figi', historySell.figi)
-            .where('type', operationInfo.type)
+            .where('type', type)
             .whereNull('sellOrderId')
             .orderBy('createdAt', 'desc')
             .first();

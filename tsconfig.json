@@ -1,8 +1,10 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
+    "target": "ES2019",
     "module": "commonjs",
-    "lib": ["esnext"],
+    "lib": [
+      "esnext"
+    ],
     "sourceMap": true,
     "incremental": true,
     "rootDir": "./src",
@@ -13,6 +15,10 @@
     "resolveJsonModule": true
   },
   "compileOnSave": true,
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

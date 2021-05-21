@@ -10,7 +10,7 @@ select
   instHist.type
 from "Instrument" as inst, "InstrumentHistory" as instHist
 where inst.figi = instHist.figi
-and "sellPrice" notnull
+-- and "sellPrice" is null
 order by "name"
 -- Продажа по цене но покупка не выше предыдущей продажи по линии
 -- проверить нефть

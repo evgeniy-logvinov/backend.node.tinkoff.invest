@@ -17,22 +17,14 @@ import { CandleResolution, CandleStreaming, MarketInstrument, OperationType, Ord
 import api from './ApiService';
 import HelperService from './HelperService';
 
-class TinkoffOrderService {
+class OrderService {
 
     public static createLimitOrder = async (operation: 'Buy' | 'Sell', {figi}: MarketInstrument, lots: number, price: number): Promise<PlacedLimitOrder | undefined> => {
-      try {
-        return await api.limitOrder({operation, figi, lots, price});
-      } catch (err) {
-        HelperService.errorHandler(err);
-      }
+      return await api.limitOrder({operation, figi, lots, price});
     }
 
     public static cancelOrder = async (orderId: string) => {
-      try {
-        await api.cancelOrder({orderId});
-      } catch (err) {
-        HelperService.errorHandler(err);
-      }
+      await api.cancelOrder({orderId});
     }
 
     public static getOrderbook = async (marketInstrument: MarketInstrument) => {
@@ -63,11 +55,11 @@ class TinkoffOrderService {
       }
     }
 
-    public static hasPlacedOrderByTicket = async (figi: string, operation: OperationType): Promise<boolean | undefined> => {
+    public static order = async (figi: string, operation: OperationType): Promise<Order | undefined> => {
       try {
         const orders: Order[] = await api.orders();
         const currentOrder = orders.find(el => el.operation === operation && el.figi === figi);
-        return !!currentOrder;
+        return currentOrder;
       } catch (err) {
         HelperService.errorHandler(err);
       }
@@ -131,4 +123,4 @@ class TinkoffOrderService {
 
 }
 
-export default TinkoffOrderService;
+export default OrderService;

@@ -11,8 +11,9 @@
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "knex": "^0.21.17",
-    "pg": "^8.5.1",
-    "nodemailer": "^6.4.11"
+    "moment": "^2.29.1",
+    "nodemailer": "^6.4.11",
+    "pg": "^8.5.1"
   },
   "devDependencies": {
     "@actions/core": "^1.2.6",
