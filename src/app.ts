@@ -20,15 +20,22 @@ import HelperService from './services/HelperService';
 const app = express();
 
 console.log('sandboxToken', process.env.SANDBOX_TOKEN);
-if (process.env.SANDBOX_TOKEN) {
+console.log('token', process.env.TOKEN);
+if (process.env.SANDBOX_TOKEN || process.env.TOKEN) {
   try {
     const carrier = new CarrierService();
     carrier.fillPortfolio();
-    carrier.Apple();
-    carrier.Baidu();
+    carrier.getPortfolio();
+    // carrier.Apple();
+    // carrier.Baidu();
     carrier.EnergyTransfer();
     carrier.AmericanAirlines();
     carrier.BakerHughes();
+    carrier.RoyalDutchShell();
+    carrier.Nike();
+    carrier.CorEnergyInfrastructureTrust();
+    carrier.Fxim();
+    // carrier.Hess();
   } catch (err) {
     HelperService.errorHandler(err);
   }

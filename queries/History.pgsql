@@ -14,3 +14,16 @@ where inst.figi = instHist.figi
 order by "name"
 -- Продажа по цене но покупка не выше предыдущей продажи по линии
 -- проверить нефть
+
+/*
+select
+-- 	bb."sellOrderId",
+	sum(bb."sellPrice" - bb."sellComission" - bb."buyPrice" - bb."buyComission") as profit
+-- 	,
+-- 	*
+from
+	"Instrument" as aa,
+	"InstrumentHistory" as bb
+where
+	aa.figi = bb.figi
+and bb."sellOrderId" != '' */

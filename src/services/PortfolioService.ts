@@ -36,6 +36,15 @@ class PortfolioService {
       }
     }
 
+    public getPortfolio = async () => {
+      try {
+        const res = await api.portfolio();
+        console.log('portfolio', res);
+      } catch (err) {
+        HelperService.errorHandler(err);
+      }
+    }
+
     public getPortfolioCurrencies = async () => {
       try {
         const res = await api.portfolioCurrencies();

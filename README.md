@@ -3,7 +3,7 @@ Node js tinkoff bot
 
 # .env file
 * Carrier
-SANDBOX_TOKEN="t.JHu1ABGttwLLmlOFEf0oaqcVJ7v9R8zQWofuEhLRyCaNzEQ7npqt4kMPNm2QIbtxTR6_hP79y0s2w1fRCovaWg"
+SANDBOX_TOKEN=""
 
 * PostgreSql
 POSTGRES_DB=db_name

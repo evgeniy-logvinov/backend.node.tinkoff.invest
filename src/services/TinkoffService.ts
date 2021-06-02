@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import api from './ApiService';
-import { CandleResolution, Candles, Depth, MarketInstrument, Orderbook, PortfolioPosition } from '@tinkoff/invest-openapi-js-sdk';
+import { CandleResolution, Candles, Depth, MarketInstrument, Order, Orderbook, PortfolioPosition } from '@tinkoff/invest-openapi-js-sdk';
 import DBService from './DBService';
 import OrderService from './OrderService';
 import moment from 'moment';
@@ -28,6 +28,15 @@ class TinkoffService {
 
     static getOrderbook = async (figi: string, depth: Depth = 10): Promise<Orderbook> => {
       return await api.orderbookGet({ figi, depth });
+    }
+
+    static getOrders = async (): Promise<Order[]> => {
+      return await api.orders();
+    }
+
+    static getOrdersByFigi = async (figi: string, depth: Depth = 10): Promise<Order[]> => {
+      const orders: Order[] = await api.orders();
+      return orders.filter(el => el.figi === figi);
     }
 
     static getCandle = async (figi: string, interval: CandleResolution = '1min'): Promise<Candles> => {

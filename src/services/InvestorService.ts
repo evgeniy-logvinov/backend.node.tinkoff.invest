@@ -16,15 +16,15 @@
 class InvestorService {
 
     public static getInvestorComission = (volume: number): number => {
-      return Math.round(volume * 0.3) / 100;
+      return Math.ceil(volume * 0.3) / 100;
     }
 
     public static getTax = (sellPrice: number, sellComm: number, buyPrice: number, buyComm: number): number => {
-      return +(Math.round((sellPrice - sellComm - buyPrice - buyComm) / 100 * 13)).toFixed(2);
+      return +((Math.ceil(sellPrice - sellComm - buyPrice - buyComm) / 100 * 13)).toFixed(2);
     }
 
     public static getTraderComission = (value: number) => {
-      return Math.round(value * 0.05) / 100;
+      return Math.ceil(value * 0.05) / 100;
     }
 }
 

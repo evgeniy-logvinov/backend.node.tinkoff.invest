@@ -16,10 +16,13 @@
 import OpenAPI from '@tinkoff/invest-openapi-js-sdk';
 // const dotenv = require('dotenv').config({ path: `.env.${process.env.NODE_ENV}` });
 
-// const ap iURL = 'https://api-invest.tinkoff.ru/openapi';
+const apiURL = 'https://api-invest.tinkoff.ru/openapi';
 const sandboxApiURL = 'https://api-invest.tinkoff.ru/openapi/sandbox/';
 const socketURL = 'wss://api-invest.tinkoff.ru/openapi/md/v1/md-openapi/ws';
-// const secretToken = process.env.TOKEN; // токен для боевого api
+const secretToken = process.env.TOKEN; // токен для боевого api
+// const secretToken = null; // токен для боевого api
 const sandboxToken = process.env.SANDBOX_TOKEN; // токен для сандбокса
 
-export default new OpenAPI({ apiURL: sandboxApiURL, secretToken: sandboxToken as string, socketURL });
+export default !!secretToken && secretToken !== 'empty' ? new OpenAPI({ apiURL, secretToken, socketURL }) : new OpenAPI({ apiURL: sandboxApiURL, secretToken: sandboxToken as string, socketURL });
+
+

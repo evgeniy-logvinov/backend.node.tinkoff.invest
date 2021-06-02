@@ -15,11 +15,12 @@
  */
 import PortfolioService from './PortfolioService';
 import ScalpService from './ScalpService';
+import ScalpServiceTinkoffOnly from './ScalpServiceTinkoffOnly';
 import TinkoffService from './TinkoffService';
 
 class CarrierService {
 
-  private testEnv = true;
+  private testEnv = false;
 
   public fillPortfolio = async () => {
     const portfolioService = new PortfolioService();
@@ -28,34 +29,59 @@ class CarrierService {
       portfolioService.setCurrenciesBalance('USD', 4000);
   }
 
+  public getPortfolio = async () => {
+    const portfolioService = new PortfolioService();
+    await portfolioService.getPortfolio();
+  }
+
   public Apple = async () => {
     const ticker = 'AAPL';
-    this.startProcess(ticker);
+    this.startProcessTinkoffOnly(ticker);
   }
 
   public Baidu = async () => {
     const ticker = 'BIDU';
-    this.startProcess(ticker);
+    this.startProcessTinkoffOnly(ticker);
   }
 
   public EnergyTransfer = async () => {
     const ticker = 'ET';
-    this.startProcess(ticker);
+    this.startProcessTinkoffOnly(ticker);
   }
 
   public AmericanAirlines = async () => {
     const ticker = 'AAL';
-    this.startProcess(ticker);
+    this.startProcessTinkoffOnly(ticker);
   }
 
   public BakerHughes = async () => {
     const ticker = 'BKR';
-    this.startProcess(ticker);
+    this.startProcessTinkoffOnly(ticker);
+  }
+
+  public RoyalDutchShell = async () => {
+    const ticker = 'RDS.A';
+    this.startProcessTinkoffOnly(ticker, 3);
+  }
+
+  public Nike = async () => {
+    const ticker = 'NKE';
+    this.startProcessTinkoffOnly(ticker, 3);
+  }
+
+  public CorEnergyInfrastructureTrust = async () => {
+    const ticker = 'CORR';
+    this.startProcessTinkoffOnly(ticker, 4);
+  }
+
+  public Fxim = async () => {
+    const ticker = 'FXIM';
+    this.startProcessTinkoffOnly(ticker, 2);
   }
 
   public Hess = async () => {
     const ticker = 'HES';
-    this.startProcess(ticker);
+    this.startProcessTinkoffOnly(ticker);
   }
 
   private async startProcess(ticker: string) {
@@ -65,9 +91,22 @@ class CarrierService {
     this.startProcessScalp(ticker);
   }
 
+  private async startProcessTinkoffOnly(ticker: string, balance: number = 1) {
+    // this.startProcessInvestor(ticker);
+    // this.startProcessTrader(ticker);
+    // this.startProcessTraderCandle(ticker);
+    this.startProcessScalpTinkoffOnly(ticker, balance);
+  }
+
   startProcessScalp = async (ticker: string) => {
     const marketInstrument = await TinkoffService.getInstrument(ticker);
     const scalpService = new ScalpService(marketInstrument, 1, 'traider');
+    scalpService.start();
+  }
+
+  startProcessScalpTinkoffOnly = async (ticker: string, balance: number) => {
+    const marketInstrument = await TinkoffService.getInstrument(ticker);
+    const scalpService = new ScalpServiceTinkoffOnly(marketInstrument, balance, 'traider');
     scalpService.start();
   }
 
